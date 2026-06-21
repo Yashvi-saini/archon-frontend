@@ -16,7 +16,7 @@ export function ForgotPasswordForm() {
     // Simulated request to generate OTP
     setTimeout(() => {
       setIsLoading(false);
-      router.push(`/verify-otp?email=${encodeURIComponent(email)}&action=reset`);
+      router.push("/verify-otp?action=reset");
     }, 1500);
   };
 

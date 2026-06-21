@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
 export function VerifyOtpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "your email";
   const action = searchParams.get("action") || "verify"; // 'verify' or 'reset'
   
   const [otp, setOtp] = useState("");
@@ -23,7 +21,7 @@ export function VerifyOtpForm() {
       setIsLoading(false);
       if (action === "reset") {
         alert("OTP verified successfully! Please enter your new password.");
-        router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`);
+        router.push("/reset-password");
       } else {
         alert("Account verified successfully! You can now log in.");
         router.push("/login");
@@ -48,7 +46,7 @@ export function VerifyOtpForm() {
       <div className="flex flex-col gap-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Verify OTP</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          We have sent a 6-digit verification code to <span className="font-semibold text-foreground">{email}</span>.
+          We have sent a 6-digit verification code to your registered email address.
         </p>
       </div>
 

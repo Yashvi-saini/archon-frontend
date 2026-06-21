@@ -1,15 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
 
 export function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
-  const otp = searchParams.get("otp") || "";
-
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(true);
@@ -51,7 +47,7 @@ export function ResetPasswordForm() {
       <div className="flex flex-col gap-2 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">New Password</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Create a secure new password for your account associated with <span className="font-semibold text-foreground">{email}</span>.
+          Create a secure new password for your account.
         </p>
       </div>
 

@@ -19,7 +19,7 @@ export function SignupForm() {
     // Simulated API call requesting OTP
     setTimeout(() => {
       setIsLoading(false);
-      router.push(`/verify-otp?email=${encodeURIComponent(email)}&action=verify`);
+      router.push("/verify-otp");
     }, 1500);
   };
 
