@@ -34,7 +34,7 @@ export function ForgotPasswordForm() {
 
       {/* Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Forgot Password</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Forgot Password</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Enter your email address and we will send you a verification code to reset your password.
         </p>

@@ -35,7 +35,7 @@ export function LoginForm() {
 
       {/* Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Login</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Login</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Enter your credentials to access your interview workspace.
         </p>

@@ -44,7 +44,7 @@ export function VerifyOtpForm() {
 
       {/* Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Verify OTP</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Verify OTP</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           We have sent a 6-digit verification code to your registered email address.
         </p>

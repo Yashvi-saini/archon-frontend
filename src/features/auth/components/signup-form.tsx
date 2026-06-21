@@ -37,7 +37,7 @@ export function SignupForm() {
 
       {/* Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Register</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Register</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Create an account to begin system design interview practice.
         </p>

@@ -45,7 +45,7 @@ export function ResetPasswordForm() {
 
       {/* Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">New Password</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">New Password</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Create a secure new password for your account.
         </p>
