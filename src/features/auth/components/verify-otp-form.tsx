@@ -99,7 +99,7 @@ export function VerifyOtpForm() {
             maxLength={6}
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-            placeholder="123456"
+            placeholder="Enter 6-digit code"
             className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-lg text-center tracking-[0.5em] font-mono text-foreground placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
           />
         </div>
