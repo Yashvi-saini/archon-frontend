@@ -64,10 +64,6 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="flex flex-col gap-8">
           {/* Welcome Section */}
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <LayoutDashboard className="h-6 w-6 text-primary" />
-            </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -76,42 +72,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Status Card */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
-                Auth Status
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                  Authenticated
-                </span>
-              </div>
-            </div>
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
-                Session
-              </p>
-              <p className="text-sm font-semibold">Active</p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50 p-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">
-                Flow Test
-              </p>
-              <p className="text-sm font-semibold text-primary">✓ Complete</p>
-            </div>
-          </div>
 
-          {/* Info */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 p-6">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              This is a minimal dashboard page created to verify the authentication flow. 
-              If you can see this page, login was successful and your session is persisted.
-              Try refreshing the page — you should stay logged in.
-            </p>
-          </div>
-        </div>
+      
       </main>
     </div>
   );
