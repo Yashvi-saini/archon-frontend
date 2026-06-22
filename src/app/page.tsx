@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default function Home() {
@@ -6,6 +7,17 @@ export default function Home() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground transition-colors duration-200 font-sans p-6 gap-6">
       <div className="absolute top-6 right-6">
         <ThemeToggle />
+      </div>
+
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+        <Image
+          src="/logo.png"
+          alt="Archon Logo"
+          width={112}
+          height={112}
+          priority
+          className="object-contain rounded-xl"
+        />
       </div>
       
       <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">
