@@ -1,4 +1,5 @@
 import { AuthLayout, LoginForm } from "@/features/auth";
+import { Suspense } from "react";
 
 export const metadata = {
   title: "Login | Archon",
@@ -13,7 +14,9 @@ export default function LoginPage() {
       illustrationSrc="/illustrations/Login-amico.svg"
       illustrationAlt="Login Illustration"
     >
-      <LoginForm />
+      <Suspense fallback={<div className="h-full flex items-center justify-center">Loading...</div>}>
+        <LoginForm />
+      </Suspense>
     </AuthLayout>
   );
 }

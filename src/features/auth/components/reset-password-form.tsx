@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { resetPassword } from "../api/auth";
+import { toast } from "sonner";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -11,10 +13,31 @@ export function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
 
-  const handleResetSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const tempEmail = sessionStorage.getItem("auth_temp_email");
+      const tempOtp = sessionStorage.getItem("auth_temp_otp");
+      
+      if (!tempEmail || !tempOtp) {
+        setError("Reset session expired or invalid. Please try the forgot password request again.");
+      } else {
+        setEmail(tempEmail);
+        setOtp(tempOtp);
+      }
+    }
+  }, []);
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!email || !otp) {
+      setError("Verification details are missing. Please restart the reset process.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -22,12 +45,19 @@ export function ResetPasswordForm() {
     }
 
     setIsLoading(true);
-    // Simulated Password Reset API
-    setTimeout(() => {
-      setIsLoading(false);
-      alert("Success! Your password has been updated.");
+    const response = await resetPassword(email, otp, password);
+    setIsLoading(false);
+
+    if (response.success) {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("auth_temp_email");
+        sessionStorage.removeItem("auth_temp_otp");
+      }
+      toast.success("Your password has been successfully updated!");
       router.push("/login");
-    }, 1500);
+    } else {
+      setError(response.error || "Failed to reset password. Please check your verification code and try again.");
+    }
   };
 
   return (

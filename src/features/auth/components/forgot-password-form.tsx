@@ -4,20 +4,30 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { forgotPassword } from "../api/auth";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
+  const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulated request to generate OTP
-    setTimeout(() => {
-      setIsLoading(false);
+    setError("");
+
+    const response = await forgotPassword(email);
+
+    setIsLoading(false);
+    if (response.success) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("auth_temp_email", email);
+      }
       router.push("/verify-otp?action=reset");
-    }, 1500);
+    } else {
+      setError(response.error || "Failed to process request. Please try again.");
+    }
   };
 
   return (
@@ -61,6 +71,9 @@ export function ForgotPasswordForm() {
             className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
           />
         </div>
+
+        {/* Error Message */}
+        {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
 
         {/* Submit */}
         <button

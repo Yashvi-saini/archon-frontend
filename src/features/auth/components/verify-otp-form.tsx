@@ -1,32 +1,63 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { verifyEmail } from "../api/auth";
+import { toast } from "sonner";
 
 export function VerifyOtpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const action = searchParams.get("action") || "verify"; // 'verify' or 'reset'
+  const action = searchParams.get("action") || "verify"; 
   
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
 
-  const handleOtpVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulated OTP verification
-    setTimeout(() => {
-      setIsLoading(false);
-      if (action === "reset") {
-        alert("OTP verified successfully! Please enter your new password.");
-        router.push("/reset-password");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const tempEmail = sessionStorage.getItem("auth_temp_email");
+      if (!tempEmail) {
+        setError("No active verification session. Please return to the form and try again.");
       } else {
-        alert("Account verified successfully! You can now log in.");
-        router.push("/login");
+        setEmail(tempEmail);
       }
-    }, 1500);
+    }
+  }, []);
+
+  const handleOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!email) {
+      setError("Email address is missing. Please restart the verification process.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    if (action === "reset") {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("auth_temp_otp", otp);
+      }
+      setIsLoading(false);
+      toast.success("Code verified! Please set your new password.");
+      router.push("/reset-password");
+    } else {
+      const response = await verifyEmail(email, otp);
+      setIsLoading(false);
+
+      if (response.success) {
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("auth_temp_email");
+        }
+        router.push("/login?verified=true");
+      } else {
+        setError(response.error || "Invalid verification code. Please try again.");
+      }
+    }
   };
 
   return (
@@ -73,6 +104,9 @@ export function VerifyOtpForm() {
           />
         </div>
 
+        {/* Error Message */}
+        {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
+
         {/* Submit */}
         <button
           type="submit"
@@ -92,7 +126,7 @@ export function VerifyOtpForm() {
           <button
             type="button"
             className="font-semibold text-primary hover:underline cursor-pointer"
-            onClick={() => alert("OTP resent successfully!")}
+            onClick={() => toast.success("Verification code resent successfully!")}
           >
             Resend Code
           </button>

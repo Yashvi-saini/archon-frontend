@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { registerUser } from "../api/auth";
 
 export function SignupForm() {
   const router = useRouter();
@@ -12,15 +13,24 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulated API call requesting OTP
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/verify-otp");
-    }, 1500);
+    setError("");
+
+    const response = await registerUser(name, email, password);
+
+    setIsLoading(false);
+    if (response.success) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("auth_temp_email", email);
+      }
+      router.push("/verify-otp?action=verify");
+    } else {
+      setError(response.error || "Registration failed. Please try again.");
+    }
   };
 
   return (
@@ -111,6 +121,9 @@ export function SignupForm() {
             </button>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
 
         {/* Submit */}
         <button

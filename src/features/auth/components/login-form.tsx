@@ -1,24 +1,43 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { loginUser } from "../api/auth";
+import { toast } from "sonner";
 
 export function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(true);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (searchParams.get("verified") === "true") {
+      toast.success("Account verified successfully! You can now log in.");
+      router.replace("/login");
+    }
+  }, [searchParams, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulated authentication
-    setTimeout(() => {
-      setIsLoading(false);
-      alert(`Success! Logging in as: ${email}`);
-    }, 1500);
+    setError("");
+
+    const response = await loginUser(email, password);
+
+    setIsLoading(false);
+    if (response.success) {
+      toast.success("Login successful!");
+      router.push("/");
+    } else {
+      setError(response.error || "Invalid email or password. Please try again.");
+    }
   };
 
   return (
@@ -109,6 +128,9 @@ export function LoginForm() {
             Forgot Password?
           </Link>
         </div>
+
+        {/* Error Message */}
+        {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
 
         {/* Submit */}
         <button
