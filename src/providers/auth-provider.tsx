@@ -41,7 +41,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password"];
+const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/verify-otp"];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
