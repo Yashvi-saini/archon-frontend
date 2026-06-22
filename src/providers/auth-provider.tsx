@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
+// ─── Token Storage ────────────────────────────────────────────────
 const TOKEN_KEYS = {
   access: "archon_access_token",
   refresh: "archon_refresh_token",
@@ -23,7 +24,7 @@ function clearTokens() {
   localStorage.removeItem(TOKEN_KEYS.refresh);
 }
 
-
+// ─── Context Types ────────────────────────────────────────────────
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -43,8 +44,14 @@ const AuthContext = createContext<AuthContextType>({
 
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/verify-otp"];
 
+const AUTH_REDIRECT_ROUTES = ["/", "/login", "/signup"];
+
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+}
+
+function isAuthRedirectRoute(pathname: string): boolean {
+  return AUTH_REDIRECT_ROUTES.includes(pathname);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -52,26 +59,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const hasInitialized = useRef(false);
-
 
   useEffect(() => {
-    if (hasInitialized.current) return;
-    hasInitialized.current = true;
-
     const stored = getStoredToken(TOKEN_KEYS.access);
-    if (stored) {
-      setAccessToken(stored);
-    }
+    setAccessToken(stored);
     setIsLoading(false);
   }, []);
-
 
   useEffect(() => {
     if (isLoading) return;
 
     if (!accessToken && !isPublicRoute(pathname)) {
       router.replace("/login");
+      return;
+    }
+
+  //loginn user to dash directly
+    if (accessToken && isAuthRedirectRoute(pathname)) {
+      router.replace("/dashboard");
+      return;
     }
   }, [isLoading, accessToken, pathname, router]);
 
@@ -94,7 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
 
 export function useAuth() {
   const context = useContext(AuthContext);
