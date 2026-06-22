@@ -1,20 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { verifyEmail } from "../api/auth";
 import { toast } from "sonner";
+import { validateOtp } from "../utils/validators";
 
 export function VerifyOtpForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const action = searchParams.get("action") || "verify"; 
   
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState<{ otp?: string }>({});
+  const [touched, setTouched] = useState<{ otp?: boolean }>({});
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -27,6 +28,24 @@ export function VerifyOtpForm() {
     }
   }, []);
 
+  const validate = (val: string) => {
+    const err = validateOtp(val);
+    setErrors({ otp: err || undefined });
+    return err;
+  };
+
+  const handleBlur = () => {
+    setTouched({ otp: true });
+    validate(otp);
+  };
+
+  const handleChange = (val: string) => {
+    setOtp(val);
+    if (touched.otp || val.length >= 6) {
+      validate(val);
+    }
+  };
+
   const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -36,27 +55,23 @@ export function VerifyOtpForm() {
       return;
     }
 
+    setTouched({ otp: true });
+    const otpErr = validate(otp);
+    if (otpErr) {
+      return;
+    }
+
     setIsLoading(true);
+    const response = await verifyEmail(email, otp);
+    setIsLoading(false);
 
-    if (action === "reset") {
+    if (response.success) {
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("auth_temp_otp", otp);
+        sessionStorage.removeItem("auth_temp_email");
       }
-      setIsLoading(false);
-      toast.success("Code verified! Please set your new password.");
-      router.push("/reset-password");
+      router.push("/login?verified=true");
     } else {
-      const response = await verifyEmail(email, otp);
-      setIsLoading(false);
-
-      if (response.success) {
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem("auth_temp_email");
-        }
-        router.push("/login?verified=true");
-      } else {
-        setError(response.error || "Invalid verification code. Please try again.");
-      }
+      setError(response.error || "Invalid verification code. Please try again.");
     }
   };
 
@@ -75,7 +90,7 @@ export function VerifyOtpForm() {
 
       {/* Header */}
       <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Verify OTP</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Verify Email</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           We have sent a 6-digit verification code to your registered email address.
         </p>
@@ -88,7 +103,9 @@ export function VerifyOtpForm() {
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="otp"
-            className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
+            className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
+              touched.otp && errors.otp ? "text-rose-500" : "text-zinc-500 dark:text-zinc-400"
+            }`}
           >
             Verification Code (OTP)
           </label>
@@ -98,10 +115,18 @@ export function VerifyOtpForm() {
             required
             maxLength={6}
             value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-            placeholder="Enter 6-digit code"
-            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-lg text-center tracking-[0.5em] font-mono text-foreground placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            onChange={(e) => handleChange(e.target.value.replace(/\D/g, ""))}
+            onBlur={handleBlur}
+            placeholder="••••••"
+            className={`w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-lg text-center tracking-[0.5em] font-mono text-foreground placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-hidden focus:ring-2 transition-all ${
+              touched.otp && errors.otp
+                ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
+                : "border-zinc-200 dark:border-zinc-800 focus:ring-primary/20 focus:border-primary"
+            }`}
           />
+          {touched.otp && errors.otp && (
+            <p className="text-xs font-semibold text-rose-500 mt-0.5 text-center">{errors.otp}</p>
+          )}
         </div>
 
         {/* Error Message */}
@@ -116,7 +141,7 @@ export function VerifyOtpForm() {
           {isLoading ? (
             <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
           ) : (
-            "Verify OTP"
+            "Verify Email"
           )}
         </button>
 

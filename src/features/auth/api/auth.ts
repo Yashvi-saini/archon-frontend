@@ -4,15 +4,71 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+  access_token?: string;
+  refresh_token?: string;
 }
 
-async function request<T = any>(path: string, body?: Record<string, any>): Promise<ApiResponse<T>> {
+export function sanitizeBackendError(error: string): string {
+  if (!error) return "An unexpected error occurred.";
+
+  if (error.includes("validation for 'Email' failed")) {
+    return "Please enter a valid email address).";
+  }
+  if (error.includes("validation for 'Password' failed") && error.includes("'min' tag")) {
+    return "Password must be at least 8 characters long.";
+  }
+  if (error.includes("validation for 'Name' failed")) {
+    if (error.includes("'required' tag")) {
+      return "Name is required.";
+    }
+    return "Please enter a valid name.";
+  }
+  if (
+    error.includes("validation for 'NewPassword' failed") || 
+    error.includes("validation for 'New_Password' failed")
+  ) {
+    return "New password must be at least 8 characters long.";
+  }
+  if (error.includes("validation for 'Otp' failed") || error.includes("validation for 'OTP' failed")) {
+    return "Verification code must be exactly 6 digits.";
+  }
+
+  // cleanups 
+  if (error.toLowerCase().includes("invalid credentials") || error.includes("401")) {
+    return "Incorrect email or password. Please try again.";
+  }
+
+  return error;
+}
+
+// Get stored access token for authenticated requests
+function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("archon_access_token");
+}
+
+function getRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("archon_refresh_token");
+}
+
+async function request<T = any>(path: string, body?: Record<string, any>, requireAuth = false): Promise<ApiResponse<T>> {
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Inject Bearer token for authenticated endpoints
+    if (requireAuth) {
+      const token = getAccessToken();
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+    }
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: body ? JSON.stringify(body) : undefined,
       credentials: "include", 
     });
@@ -22,8 +78,12 @@ async function request<T = any>(path: string, body?: Record<string, any>): Promi
     if (!response.ok) {
       return {
         success: false,
-        error: result.error || result.message || `Request failed with status ${response.status}`,
+        error: sanitizeBackendError(result.error || result.message || `Request failed with status ${response.status}`),
       };
+    }
+
+    if (result.success === undefined) {
+      return { success: true, ...result } as ApiResponse<T>;
     }
 
     return result as ApiResponse<T>;
@@ -45,19 +105,21 @@ export async function verifyEmail(email: string, otp: string) {
   return request("/verify-email", { email, otp });
 }
 
-// 3. Login User (Cookies automatically set by Set-Cookie header)
+// 3. Login User 
 export async function loginUser(email: string, password: string) {
   return request("/login", { email, password });
 }
 
-// 4. Refresh Token (Cookies automatically sent in headers)
+// 4. Refresh Token
 export async function refreshAccessToken() {
-  return request("/refresh");
+  const refreshToken = getRefreshToken();
+  return request("/refresh", { refresh_token: refreshToken });
 }
 
-// 5. Logout User (Cookies automatically sent in headers)
+// 5. Logout User
 export async function logoutUser() {
-  return request("/logout");
+  const refreshToken = getRefreshToken();
+  return request("/logout", { refresh_token: refreshToken }, true);
 }
 
 // 6. Forgot Password

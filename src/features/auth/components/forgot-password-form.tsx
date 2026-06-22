@@ -5,26 +5,55 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { forgotPassword } from "../api/auth";
+import { validateEmail } from "../utils/validators";
+import { toast } from "sonner";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState<{ email?: string }>({});
+  const [touched, setTouched] = useState<{ email?: boolean }>({});
+
+  const validate = (val: string) => {
+    const err = validateEmail(val);
+    setErrors({ email: err || undefined });
+    return err;
+  };
+
+  const handleBlur = () => {
+    setTouched({ email: true });
+    validate(email);
+  };
+
+  const handleChange = (val: string) => {
+    setEmail(val);
+    if (touched.email) {
+      validate(val);
+    }
+  };
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
-    const response = await forgotPassword(email);
+    setTouched({ email: true });
+    const emailErr = validate(email);
+    if (emailErr) {
+      return;
+    }
 
+    setIsLoading(true);
+    const response = await forgotPassword(email);
     setIsLoading(false);
+
     if (response.success) {
       if (typeof window !== "undefined") {
         sessionStorage.setItem("auth_temp_email", email);
       }
-      router.push("/verify-otp?action=reset");
+      toast.success("OTP sent to registered mail");
+      router.push("/reset-password");
     } else {
       setError(response.error || "Failed to process request. Please try again.");
     }
@@ -57,7 +86,9 @@ export function ForgotPasswordForm() {
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="email"
-            className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"
+            className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
+              touched.email && errors.email ? "text-rose-500" : "text-zinc-500 dark:text-zinc-400"
+            }`}
           >
             Email Address
           </label>
@@ -66,10 +97,18 @@ export function ForgotPasswordForm() {
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
             placeholder="Enter email"
-            className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+            className={`w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
+              touched.email && errors.email
+                ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
+                : "border-zinc-200 dark:border-zinc-800 focus:ring-primary/20 focus:border-primary"
+            }`}
           />
+          {touched.email && errors.email && (
+            <p className="text-xs font-semibold text-rose-500 mt-0.5">{errors.email}</p>
+          )}
         </div>
 
         {/* Error Message */}
