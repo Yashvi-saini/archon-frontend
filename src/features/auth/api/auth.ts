@@ -6,6 +6,7 @@ export interface ApiResponse<T = any> {
   error?: string;
   access_token?: string;
   refresh_token?: string;
+  reset_token?: string;
 }
 
 export function sanitizeBackendError(error: string): string {
@@ -127,7 +128,18 @@ export async function forgotPassword(email: string) {
   return request("/forgot-password", { email });
 }
 
-// 7. Reset Password
-export async function resetPassword(email: string, otp: string, newPassword: string) {
-  return request("/reset-password", { email, otp, new_password: newPassword });
+// 7. Verify Reset OTP
+export async function verifyResetOtp(email: string, otp: string) {
+  return request("/verify-reset-otp", { email, otp });
 }
+
+// 8. Reset Password
+export async function resetPassword(resetToken: string, newPassword: string) {
+  return request("/reset-password", { reset_token: resetToken, new_password: newPassword });
+}
+
+// 9. Resend OTP
+export async function resendOtp(email: string, intent: "register" | "forgot_password") {
+  return request("/resend-otp", { email, intent });
+}
+

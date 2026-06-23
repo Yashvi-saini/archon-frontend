@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { verifyEmail } from "../api/auth";
+import { verifyEmail, resendOtp } from "../api/auth";
 import { toast } from "sonner";
 import { validateOtp } from "../utils/validators";
 
@@ -12,10 +12,19 @@ export function VerifyOtpForm() {
   
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<{ otp?: string }>({});
   const [touched, setTouched] = useState<{ otp?: boolean }>({});
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -27,6 +36,22 @@ export function VerifyOtpForm() {
       }
     }
   }, []);
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || isResending || !email) return;
+
+    setIsResending(true);
+    setError("");
+    const response = await resendOtp(email, "register");
+    setIsResending(false);
+
+    if (response.success) {
+      toast.success("Verification code resent successfully!");
+      setResendCooldown(60);
+    } else {
+      setError(response.error || "Failed to resend verification code. Please try again.");
+    }
+  };
 
   const validate = (val: string) => {
     const err = validateOtp(val);
@@ -45,6 +70,7 @@ export function VerifyOtpForm() {
       validate(val);
     }
   };
+
 
   const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,10 +176,11 @@ export function VerifyOtpForm() {
           Didn&apos;t receive the code?{" "}
           <button
             type="button"
-            className="font-semibold text-primary hover:underline cursor-pointer"
-            onClick={() => toast.success("Verification code resent successfully!")}
+            disabled={resendCooldown > 0 || isResending}
+            className="font-semibold text-primary hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+            onClick={handleResend}
           >
-            Resend Code
+            {isResending ? "Resending..." : resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : "Resend Code"}
           </button>
         </div>
 

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-// ─── Token Storage ────────────────────────────────────────────────
+//all tokens
 const TOKEN_KEYS = {
   access: "archon_access_token",
   refresh: "archon_refresh_token",
@@ -24,7 +24,7 @@ function clearTokens() {
   localStorage.removeItem(TOKEN_KEYS.refresh);
 }
 
-// ─── Context Types ────────────────────────────────────────────────
+//context
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -42,7 +42,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 
-const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/verify-otp"];
+const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/verify-otp", "/verify-reset-otp"];
 
 const AUTH_REDIRECT_ROUTES = ["/", "/login", "/signup"];
 

@@ -53,7 +53,7 @@ export function ForgotPasswordForm() {
         sessionStorage.setItem("auth_temp_email", email);
       }
       toast.success("OTP sent to registered mail");
-      router.push("/reset-password");
+      router.push("/verify-reset-otp");
     } else {
       setError(response.error || "Failed to process request. Please try again.");
     }

@@ -31,6 +31,9 @@ export function validatePassword(password: string): string | null {
   if (!/[a-z]/.test(trimmed)) {
     return "Password must contain at least one lowercase letter.";
   }
+  if (!/\d/.test(trimmed)) {
+    return "Password must contain at least one number.";
+  }
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(trimmed)) {
     return "Password must contain at least one special character.";
   }
