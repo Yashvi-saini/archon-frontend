@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
+import { refreshAccessToken } from "@/features/auth";
+
 //all tokens
 const TOKEN_KEYS = {
   access: "archon_access_token",
@@ -41,13 +43,22 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
-
 const PUBLIC_ROUTES = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/verify-otp", "/verify-reset-otp"];
-
 const AUTH_REDIRECT_ROUTES = ["/", "/login", "/signup"];
 
 function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"));
+  return PUBLIC_ROUTES.some((route) => {
+    if (route === "/") return pathname === "/";
+    return pathname === route || pathname.startsWith(route + "/");
+  });
+}
+
+function isProtectedRoute(pathname: string): boolean {
+  return pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+}
+
+function isKnownRoute(pathname: string): boolean {
+  return isPublicRoute(pathname) || isProtectedRoute(pathname);
 }
 
 function isAuthRedirectRoute(pathname: string): boolean {
@@ -61,20 +72,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = getStoredToken(TOKEN_KEYS.access);
-    setAccessToken(stored);
-    setIsLoading(false);
+    const initializeAuth = async () => {
+      // If we are on a 404 page no refresh api call and no auth checks
+      if (!isKnownRoute(window.location.pathname)) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        if (typeof window !== "undefined") {
+          const searchParams = new URLSearchParams(window.location.search);
+          const urlAccessToken = searchParams.get("access_token") || searchParams.get("token");
+          const urlRefreshToken = searchParams.get("refresh_token");
+
+          if (urlAccessToken && urlRefreshToken) {
+            // Save query tokens
+            storeTokens(urlAccessToken, urlRefreshToken);
+            setAccessToken(urlAccessToken);
+            
+            // Clean URL query parameters
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        // Fallback to localStorage
+        const stored = getStoredToken(TOKEN_KEYS.access);
+        if (stored) {
+          setAccessToken(stored);
+          setIsLoading(false);
+          return;
+        }
+
+        // If no stored token, try refresh (cookie-based session recovery)
+        const response = await refreshAccessToken();
+        if (response.success) {
+          const newAccessToken = response.access_token || response.data?.access_token;
+          const newRefreshToken = response.refresh_token || response.data?.refresh_token;
+          if (newAccessToken && newRefreshToken) {
+            storeTokens(newAccessToken, newRefreshToken);
+            setAccessToken(newAccessToken);
+          }
+        } else {
+          clearTokens();
+        }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
+        clearTokens();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
   useEffect(() => {
     if (isLoading) return;
+
+    if (!isKnownRoute(pathname)) return;
 
     if (!accessToken && !isPublicRoute(pathname)) {
       router.replace("/login");
       return;
     }
 
-  //loginn user to dash directly
     if (accessToken && isAuthRedirectRoute(pathname)) {
       router.replace("/dashboard");
       return;

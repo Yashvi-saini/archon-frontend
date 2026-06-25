@@ -20,6 +20,11 @@ export function SignupForm() {
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; password?: boolean; confirmPassword?: boolean }>({});
 
+  const handleGoogleLogin = () => {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://archon.monu14.me";
+    window.location.href = `${apiBaseUrl}/login/google`;
+  };
+
   const validate = (field: "name" | "email" | "password" | "confirmPassword", value: string, currentPasswordState?: string) => {
     let err = "";
     if (field === "name") {
@@ -274,6 +279,24 @@ export function SignupForm() {
         </button>
 
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className=" px-2 text-zinc-500 dark:text-zinc-400 font-medium">Or</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-semibold text-sm rounded-lg shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5"
+      >
+        <img src="/google.svg" alt="Google" className="h-4 w-4" />
+        Continue with Google
+      </button>
 
       {/* Footer Link */}
       <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-8">

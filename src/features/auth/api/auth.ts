@@ -114,7 +114,11 @@ export async function loginUser(email: string, password: string) {
 // 4. Refresh Token
 export async function refreshAccessToken() {
   const refreshToken = getRefreshToken();
-  return request("/refresh", { refresh_token: refreshToken });
+  const body: Record<string, any> = {};
+  if (refreshToken) {
+    body.refresh_token = refreshToken;
+  }
+  return request("/refresh", body);
 }
 
 // 5. Logout User
