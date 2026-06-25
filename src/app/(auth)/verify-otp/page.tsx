@@ -6,8 +6,8 @@ import { AuthLayout, VerifyOtpForm } from "@/features/auth";
 function VerifyOtpContent() {
   return (
     <AuthLayout
-      title="Confirm your identity to secure your workspace."
-      subtitle="Please enter the verification code sent to your email to complete verification."
+      title="Verify Identity"
+      subtitle="Enter the secure 6-digit verification code sent to your registered email."
       illustrationSrc="/illustrations/Enter OTP-amico.svg"
       illustrationAlt="Enter OTP Illustration"
     >

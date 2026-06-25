@@ -111,25 +111,25 @@ export function SignupForm() {
       {/* Back Button */}
       <Link
         href="/"
-        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:opacity-85 transition-opacity mb-6 group w-fit cursor-pointer"
+        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:opacity-85 transition-opacity mb-2 group w-fit cursor-pointer"
       >
         <ChevronLeft className="h-4 w-4 transform group-hover:-translate-x-0.5 transition-transform" />
         Back
       </Link>
 
       {/* Header */}
-      <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Register</h1>
+      <div className="flex flex-col gap-1 mb-3">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Register</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Create an account to begin system design interview practice.
         </p>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-5">
+      <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-3">
         
         {/* Name */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label
             htmlFor="name"
             className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
@@ -146,7 +146,7 @@ export function SignupForm() {
             onChange={(e) => handleChange("name", e.target.value)}
             onBlur={() => handleBlur("name")}
             placeholder="Enter name"
-            className={`w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
+            className={`w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
               ((touched.name || name) && errors.name)
                 ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
                 : "border-zinc-200 dark:border-zinc-800 focus:ring-primary/20 focus:border-primary"
@@ -158,7 +158,7 @@ export function SignupForm() {
         </div>
 
         {/* Email */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label
             htmlFor="email"
             className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
@@ -175,7 +175,7 @@ export function SignupForm() {
             onChange={(e) => handleChange("email", e.target.value)}
             onBlur={() => handleBlur("email")}
             placeholder="Enter email"
-            className={`w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
+            className={`w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
               touched.email && errors.email
                 ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
                 : "border-zinc-200 dark:border-zinc-800 focus:ring-primary/20 focus:border-primary"
@@ -187,7 +187,7 @@ export function SignupForm() {
         </div>
 
         {/* Password */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label
             htmlFor="password"
             className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
@@ -205,7 +205,7 @@ export function SignupForm() {
               onChange={(e) => handleChange("password", e.target.value)}
               onBlur={() => handleBlur("password")}
               placeholder="••••••••"
-              className={`w-full pl-4 pr-10 py-3 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
+              className={`w-full pl-4 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
                 touched.password && errors.password
                   ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
                   : "border-zinc-200 dark:border-zinc-800 focus:ring-primary/20 focus:border-primary"
@@ -225,7 +225,7 @@ export function SignupForm() {
         </div>
 
         {/* Confirm Password */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <label
             htmlFor="confirm-password"
             className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
@@ -243,7 +243,7 @@ export function SignupForm() {
               onChange={(e) => handleChange("confirmPassword", e.target.value)}
               onBlur={() => handleBlur("confirmPassword")}
               placeholder="••••••••"
-              className={`w-full pl-4 pr-10 py-3 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
+              className={`w-full pl-4 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-900/50 border rounded-lg text-sm text-foreground placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:ring-2 transition-all ${
                 touched.confirmPassword && errors.confirmPassword
                   ? "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500"
                   : "border-zinc-200 dark:border-zinc-800 focus:ring-primary/20 focus:border-primary"
@@ -269,7 +269,7 @@ export function SignupForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full mt-4 py-3 px-4 bg-primary hover:opacity-90 text-primary-foreground font-semibold text-sm rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full mt-1.5 py-2.5 px-4 bg-primary hover:opacity-90 text-primary-foreground font-semibold text-sm rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
@@ -280,7 +280,7 @@ export function SignupForm() {
 
       </form>
 
-      <div className="relative my-6">
+      <div className="relative my-3">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-zinc-200 dark:border-zinc-800" />
         </div>
@@ -292,14 +292,14 @@ export function SignupForm() {
       <button
         type="button"
         onClick={handleGoogleLogin}
-        className="w-full py-3 px-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-semibold text-sm rounded-lg shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5"
+        className="w-full py-2.5 px-4 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-semibold text-sm rounded-lg shadow-xs transition-all duration-200 cursor-pointer flex items-center justify-center gap-2.5"
       >
         <img src="/google.svg" alt="Google" className="h-4 w-4" />
         Continue with Google
       </button>
 
       {/* Footer Link */}
-      <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-8">
+      <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 mt-3.5">
         Already have an account?{" "}
         <Link
           href="/login"

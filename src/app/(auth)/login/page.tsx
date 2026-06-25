@@ -9,8 +9,8 @@ export const metadata = {
 export default function LoginPage() {
   return (
     <AuthLayout
-      title="Continue your journey of coding excellence and unlock new challenges with every round!"
-      subtitle="Join collaborative whiteboard interviews, code side-by-side with peers, and get immediate AI-driven engineering evaluations."
+      title="Welcome Back!"
+      subtitle="Log in to access your secure developer workspace and collaborative design panels."
       illustrationSrc="/illustrations/Login-amico.svg"
       illustrationAlt="Login Illustration"
     >

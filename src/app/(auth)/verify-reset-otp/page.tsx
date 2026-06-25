@@ -5,8 +5,8 @@ import { AuthLayout, VerifyResetOtpForm } from "@/features/auth";
 function VerifyResetOtpContent() {
   return (
     <AuthLayout
-      title="Verify verification code."
-      subtitle="Enter the code sent to your registered email to set a new password."
+      title="Confirm Reset OTP"
+      subtitle="Enter the secure verification code sent to your email to authorize password reset."
       illustrationSrc="/illustrations/Enter OTP-amico.svg"
       illustrationAlt="Verify Reset OTP"
     >
