@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Navbar } from "@/components/layout/navbar";
 import { useAuth } from "@/providers/auth-provider";
@@ -12,6 +12,23 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Load sidebar preference from localStorage on mount (hydration safety)
+  useEffect(() => {
+    const savedPreference = localStorage.getItem("archon_sidebar_collapsed");
+    if (savedPreference === "true") {
+      setIsCollapsed(true);
+    }
+  }, []);
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed(prev => {
+      const nextValue = !prev;
+      localStorage.setItem("archon_sidebar_collapsed", String(nextValue));
+      return nextValue;
+    });
+  };
 
   if (isLoading) {
     return (
@@ -31,10 +48,14 @@ export default function DashboardLayout({
       <Sidebar 
         isOpen={mobileMenuOpen} 
         onClose={() => setMobileMenuOpen(false)} 
+        isCollapsed={isCollapsed}
+        onToggleCollapse={handleToggleCollapse}
       />
 
-      {/* Main Content Pane */}
-      <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
+      {/* Main Content Pane - transition margins smoothly when sidebar collapses */}
+      <div className={`flex flex-1 flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ${
+        isCollapsed ? "lg:pl-[70px]" : "lg:pl-[260px]"
+      }`}>
         {/* Shared Navbar */}
         <Navbar onMenuClick={() => setMobileMenuOpen(true)} />
 
