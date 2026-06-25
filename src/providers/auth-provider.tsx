@@ -53,8 +53,12 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
+const PROTECTED_ROUTES = ["/dashboard", "/interviews", "/reports", "/analytics", "/settings"];
+
 function isProtectedRoute(pathname: string): boolean {
-  return pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  return PROTECTED_ROUTES.some((route) => {
+    return pathname === route || pathname.startsWith(route + "/");
+  });
 }
 
 function isKnownRoute(pathname: string): boolean {
