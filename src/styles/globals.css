@@ -34,17 +34,17 @@
 
 /* Default light theme colors */
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #09090b;
   
-  --card: #ffffff;
+  --card: #f4f4f5; 
   --card-foreground: #09090b;
   
-  --popover: #ffffff;
+  --popover: #f4f4f5; 
   --popover-foreground: #09090b;
   
   --primary: #BA68C8;
-  --primary-foreground: #ffffff;
+  --primary-foreground: #fafafa; 
   
   --muted: #f4f4f5;
   --muted-foreground: #71717a;
