@@ -100,9 +100,19 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
       id: "ai-welcome",
       sender: "ai",
       text: `Welcome to your ${topicTitle} session. Place components on the whiteboard — every node and connection you draw is sent to the AI in real time. Ask questions or explain your choices below.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: "",
     },
   ]);
+
+  useEffect(() => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === "ai-welcome" && m.timestamp === ""
+          ? { ...m, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
+          : m
+      )
+    );
+  }, []);
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

@@ -42,6 +42,16 @@ export function useInterviewWs(
   useEffect(() => {
     if (!sessionId) return;
 
+    const token = typeof window !== "undefined"
+      ? localStorage.getItem("archon_access_token")
+      : null;
+
+    if (!token) {
+      console.warn("[WS] No access token found — skipping WebSocket connection.");
+      setWsStatus("error");
+      return;
+    }
+
     const url = buildChatWsUrl(sessionId);
     const ws = new WebSocket(url);
     wsRef.current = ws;
