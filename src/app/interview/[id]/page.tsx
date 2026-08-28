@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { InterviewWorkspace } from "@/features/interview";
 
 interface PageProps {
@@ -7,7 +7,11 @@ interface PageProps {
 
 export default async function InterviewWorkspacePage({ params }: PageProps) {
   const resolvedParams = await params;
-  const id = resolvedParams.id;
+  const sessionId = resolvedParams.id;
 
-  return <InterviewWorkspace problemId={id} />;
+  return (
+    <Suspense fallback={null}>
+      <InterviewWorkspace sessionId={sessionId} />
+    </Suspense>
+  );
 }

@@ -1,135 +1,242 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { 
-  Send, 
-  Clock, 
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Send,
+  Clock,
   ArrowLeft,
   Play,
   Pause,
   CheckSquare,
-  Bot,
-  MessageSquare
+  MessageSquare,
+  Wifi,
+  WifiOff,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { WhiteboardCanvas } from "./canvas/whiteboard-canvas";
-
-interface ChatMessage {
-  id: string;
-  sender: "user" | "ai";
-  text: string;
-  timestamp: string;
-}
+import { useInterviewWs } from "../hooks/use-interview-ws";
+import type {
+  ChatMessage,
+  ExcalidrawElementSnapshot,
+  WsNodeData,
+  WsEdgeData,
+} from "../types";
 
 interface WorkspaceLayoutProps {
-  problemId: string;
+  sessionId: string;
 }
 
-export function InterviewWorkspace({ problemId }: WorkspaceLayoutProps) {
+
+function shapeToNodeType(excalidrawType: string, label: string): string {
+  const l = label.toLowerCase();
+  if (l.includes("database") || l.includes("db") || l.includes("postgres") || l.includes("mysql") || l.includes("mongo")) return "database";
+  if (l.includes("cache") || l.includes("redis") || l.includes("memcache")) return "cache";
+  if (l.includes("queue") || l.includes("kafka") || l.includes("rabbit") || l.includes("sqs")) return "queue";
+  if (l.includes("load balancer") || l.includes("lb") || l.includes("nginx") || l.includes("gateway")) return "load_balancer";
+  if (l.includes("cdn")) return "cdn";
+  if (l.includes("client") || l.includes("user") || l.includes("browser") || l.includes("mobile")) return "client";
+  if (l.includes("storage") || l.includes("s3") || l.includes("blob")) return "storage";
+  // Fall back to shape type
+  if (excalidrawType === "ellipse") return "client";
+  if (excalidrawType === "diamond") return "gateway";
+  return "service";
+}
+
+function inferEdgeProtocol(label: string): string {
+  const l = label.toLowerCase();
+  if (l.includes("grpc")) return "grpc";
+  if (l.includes("tcp")) return "tcp";
+  if (l.includes("pubsub") || l.includes("pub/sub")) return "pubsub";
+  if (l.includes("ws") || l.includes("websocket")) return "ws";
+  return "http";
+}
+
+function getElementLabel(
+  el: ExcalidrawElementSnapshot,
+  allElements: readonly ExcalidrawElementSnapshot[]
+): string {
+
+  if (el.type === "text") return el.text ?? "";
+  const boundText = allElements.find(
+    (e) => !e.isDeleted && e.type === "text" && e.containerId === el.id
+  );
+  return boundText?.text ?? "";
+}
+
+const NODE_TYPES = new Set(["rectangle", "ellipse", "diamond"]);
+const EDGE_TYPES = new Set(["arrow", "line"]);
+
+export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const router = useRouter();
-  
+  const searchParams = useSearchParams();
 
-  const problemDetails = {
-    whatsapp: {
-      title: "WhatsApp System Design",
-      desc: "Design a real-time chat application to support 100M active daily users. Focus on low-latency messaging, presence indicators, and scale.",
-      initialAiMsg: "Welcome. Please design a system architecture for WhatsApp that can support 100 million active users daily, focusing on low-latency message delivery and high availability. Where would you like to start? Drag or place nodes on the canvas to map out your infrastructure."
-    },
-    uber: {
-      title: "Uber Ride Hailing",
-      desc: "Design a real-time ride-matching and GPS location tracking system. Focus on geospatial indexing, high write throughput, and matchmaking.",
-      initialAiMsg: "Welcome. Let's design Uber's ride-matching architecture. We need to handle high-frequency GPS updates and match drivers with drivers in under 2 seconds. What geospatial storage and routing components do you propose?"
-    },
-    netflix: {
-      title: "Netflix Video Streaming",
-      desc: "Design a global video streaming platform. Focus on content delivery networks (CDNs), video transcoding pipelines, and storage optimization.",
-      initialAiMsg: "Welcome. Please map out Netflix's video streaming system. Focus on how you will ingest large raw video files, transcode them into multiple bitrates, and distribute them globally with low buffering. Where should we start?"
-    },
-    custom: {
-      title: "Custom System Design",
-      desc: "Practice any custom system architecture scenario of your choice.",
-      initialAiMsg: "Welcome. Let's start your custom system design session. Please describe the problem statement you'd like to tackle and place your initial nodes on the canvas."
-    }
-  }[problemId as "whatsapp" | "uber" | "netflix" | "custom"] || {
-    title: "System Design Practice",
-    desc: "Interactive system design architecture canvas.",
-    initialAiMsg: "Welcome. Place components on the canvas and describe your high-level architecture."
-  };
+  const topicTitle = searchParams.get("title") ?? "System Design Interview";
 
-  // Timer
+  // ── Timer ───────────────────────────────────────────────────────────────────
   const [seconds, setSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
 
-  // Excalidraw 
-  const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
-
-  // Extract shapes from Excalidraw
-  const getShapesMetrics = () => {
-    if (!excalidrawAPI) return { shapesCount: 0, notesCount: 0, arrowsCount: 0 };
-    
-    const allElements = excalidrawAPI.getSceneElements() || [];
-    let shapesCount = 0;
-    let notesCount = 0;
-    let arrowsCount = 0;
-
-    allElements.forEach((el: any) => {
-      if (el.isDeleted) return;
-      
-      if (el.type === "text") {
-        notesCount++;
-      } else if (el.type === "arrow" || el.type === "line" || el.type === "freedraw") {
-        arrowsCount++;
-      } else if (el.type === "rectangle" || el.type === "ellipse" || el.type === "diamond") {
-        shapesCount++;
-      }
-    });
-
-    return { shapesCount, notesCount, arrowsCount };
-  };
-
-
-
-  // Chat 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "ai-1",
-      sender: "ai",
-      text: problemDetails.initialAiMsg,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    }
-  ]);
-  const [inputText, setInputText] = useState("");
-  const [isAiTyping, setIsAiTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-
-
-  // Timer Effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isTimerRunning) {
-      interval = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
+      interval = setInterval(() => setSeconds((s) => s + 1), 1000);
     }
     return () => clearInterval(interval);
   }, [isTimerRunning]);
 
-  // Format time 
   const formatTime = (totalSecs: number) => {
     const mins = Math.floor(totalSecs / 60);
     const secs = totalSecs % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  // Scroll chat to bottom
+  const [excalidrawAPI, setExcalidrawAPI] = useState<unknown>(null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "ai-welcome",
+      sender: "ai",
+      text: `Welcome to your ${topicTitle} session. Place components on the whiteboard — every node and connection you draw is sent to the AI in real time. Ask questions or explain your choices below.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    },
+  ]);
+  const [inputText, setInputText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isAiTyping]);
+  }, [messages]);
 
-  // Send message to AI
+  const addMessage = useCallback((msg: ChatMessage) => {
+    setMessages((prev) => [...prev, msg]);
+  }, []);
+
+  const {
+    wsStatus,
+    sendChat,
+    sendNodeEvent,
+    sendNodeDeleted,
+    sendEdgeEvent,
+    sendEdgeDeleted,
+    isAiTyping,
+  } = useInterviewWs(sessionId, addMessage);
+
+  useEffect(() => {
+    if (wsStatus === "open") toast.success("AI Interviewer connected", { id: "ws-status", duration: 2000 });
+    else if (wsStatus === "error") toast.error("AI connection error", { id: "ws-status" });
+    else if (wsStatus === "closed") toast.warning("AI connection closed", { id: "ws-status", duration: 3000 });
+  }, [wsStatus]);
+
+  const prevElementsRef = useRef<Map<string, ExcalidrawElementSnapshot>>(new Map());
+  const pendingElementsRef = useRef<readonly ExcalidrawElementSnapshot[] | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSceneChange = useCallback(
+    (elements: readonly ExcalidrawElementSnapshot[]) => {
+      if (wsStatus !== "open") {
+        const next = new Map<string, ExcalidrawElementSnapshot>();
+        for (const el of elements) next.set(el.id, el);
+        prevElementsRef.current = next;
+        return;
+      }
+
+      pendingElementsRef.current = elements;
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        const snapshot = pendingElementsRef.current;
+        if (!snapshot) return;
+        runDiff(snapshot);
+      }, 500); // 500ms after user stops moving
+    },
+    [wsStatus, sendNodeEvent, sendNodeDeleted, sendEdgeEvent, sendEdgeDeleted]
+  );
+
+  const runDiff = useCallback(
+    (elements: readonly ExcalidrawElementSnapshot[]) => {
+
+      const prev = prevElementsRef.current;
+      const next = new Map<string, ExcalidrawElementSnapshot>();
+
+      for (const el of elements) {
+        next.set(el.id, el);
+      }
+
+      for (const [id, el] of next) {
+        const wasPresent = prev.has(id);
+        const prevEl = prev.get(id);
+
+        if (el.type === "text") continue;
+
+        if (NODE_TYPES.has(el.type)) {
+          if (el.isDeleted) {
+            if (wasPresent && !prevEl!.isDeleted) {
+              sendNodeDeleted(id);
+            }
+          } else {
+            const label = getElementLabel(el, elements);
+            const nodePayload: WsNodeData = {
+              id: el.id,
+              type: shapeToNodeType(el.type, label),
+              label: label || `${el.type}-${id.slice(0, 6)}`,
+              x: el.x,
+              y: el.y,
+            };
+
+            if (!wasPresent || prevEl!.isDeleted) {
+              sendNodeEvent("node_added", nodePayload);
+            } else {
+              const prevLabel = getElementLabel(prevEl!, elements);
+              const moved = Math.abs(prevEl!.x - el.x) > 1 || Math.abs(prevEl!.y - el.y) > 1;
+              const labelChanged = prevLabel !== label;
+              if (moved || labelChanged) {
+                sendNodeEvent("node_updated", nodePayload);
+              }
+            }
+          }
+        }
+
+        if (EDGE_TYPES.has(el.type)) {
+          if (el.isDeleted) {
+            if (wasPresent && !prevEl!.isDeleted) {
+              sendEdgeDeleted(id);
+            }
+          } else {
+            const sourceId = el.startBinding?.elementId ?? "";
+            const targetId = el.endBinding?.elementId ?? "";
+            // Only emit if both ends are connected to nodes
+            if (!sourceId || !targetId) continue;
+
+            const label = getElementLabel(el, elements);
+            const edgePayload: WsEdgeData = {
+              id: el.id,
+              source: sourceId,
+              target: targetId,
+              type: inferEdgeProtocol(label),
+            };
+
+            if (!wasPresent || prevEl!.isDeleted) {
+              sendEdgeEvent("edge_added", edgePayload);
+            } else {
+              // Check if connection changed
+              const prevSrc = prevEl!.startBinding?.elementId ?? "";
+              const prevTgt = prevEl!.endBinding?.elementId ?? "";
+              if (prevSrc !== sourceId || prevTgt !== targetId) {
+                sendEdgeEvent("edge_updated", edgePayload);
+              }
+            }
+          }
+        }
+      }
+
+      // Update prev snapshot
+      prevElementsRef.current = next;
+    },
+    [sendNodeEvent, sendNodeDeleted, sendEdgeEvent, sendEdgeDeleted]
+  );
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -138,91 +245,76 @@ export function InterviewWorkspace({ problemId }: WorkspaceLayoutProps) {
       id: `user-${Date.now()}`,
       sender: "user",
       text: inputText,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-
-    setMessages(prev => [...prev, userMsg]);
+    addMessage(userMsg);
+    sendChat(inputText);
     setInputText("");
-    setIsAiTyping(true);
-
-    // Simulated ai response
-    setTimeout(() => {
-      let aiText = "Interesting approach. Can you expand on how you plan to handle synchronization and failure modes for this specific part of the system?";
-      
-      const text = inputText.toLowerCase();
-      if (text.includes("websocket") || text.includes("connection")) {
-        aiText = "Using WebSockets is solid for messaging. How will you scale the gateway connection servers horizontally? Where will you store the mapping of connected users to gateway instances?";
-      } else if (text.includes("kafka") || text.includes("queue") || text.includes("message broker")) {
-        aiText = "A message queue handles spike buffers effectively. What partitioning strategy would you use for Kafka topics to guarantee message ordering for individual chat rooms?";
-      } else if (text.includes("redis") || text.includes("cache")) {
-        aiText = "Caching will drastically reduce database load. If the cache nodes restart or drop, how do you handle cache stampede or cold starts on the main read databases?";
-      } else if (text.includes("database") || text.includes("postgres") || text.includes("cassandra")) {
-        aiText = "Selecting Cassandra / wide-column store works well for message history due to sequential writes. How will you handle message read patterns like loading historical chat history?";
-      }
-
-      const aiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        sender: "ai",
-        text: aiText,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
-      setIsAiTyping(false);
-    }, 2000);
   };
 
-  // Submit interview
-  const handleSubmitDesign = (shapesCount: number) => {
+  const handleGetAiFeedback = () => {
+    const api = excalidrawAPI as { getSceneElements: () => ExcalidrawElementSnapshot[] } | null;
+    const elements = api?.getSceneElements() ?? [];
+    const nodes = elements.filter((el) => !el.isDeleted && NODE_TYPES.has(el.type));
+    const edges = elements.filter((el) => !el.isDeleted && EDGE_TYPES.has(el.type));
+
+    const nodeLabels = nodes
+      .map((el) => getElementLabel(el, elements))
+      .filter(Boolean)
+      .join(", ");
+
+    const prompt =
+      nodes.length === 0
+        ? "I haven't placed any components yet. Can you guide me on where to begin?"
+        : `My whiteboard has ${nodes.length} components${nodeLabels ? ` (${nodeLabels})` : ""} and ${edges.length} connections. Please evaluate my design.`;
+
+    const userMsg: ChatMessage = {
+      id: `user-fb-${Date.now()}`,
+      sender: "user",
+      text: prompt,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+    addMessage(userMsg);
+    sendChat(prompt);
+    toast.info("Requesting AI feedback...");
+  };
+
+  //  Submit interview 
+  const handleSubmitDesign = () => {
     setIsTimerRunning(false);
-    toast.success("Design session submitted successfully.");
-    router.push("/interviews");
+    toast.success("Interview submitted! Generating evaluation report...");
+    router.push("/reports");
   };
 
-  const handleGetAiFeedback = (shapesCount: number, notesCount: number, arrowsCount: number) => {
-    setIsAiTyping(true);
-    toast.loading("Analyzing whiteboard architecture...");
-    
-    setTimeout(() => {
-      toast.dismiss();
-      let aiText = "Interesting architecture. Can you expand on how you plan to handle synchronization and failure modes for this specific configuration?";
-      
-      if (shapesCount + notesCount === 0) {
-        aiText = "Based on your current whiteboard with no components drawn, I recommend adding key architectural elements like clients, a Load Balancer, an API Gateway, and databases before requesting deep system design feedback.";
-      } else if (shapesCount + notesCount < 4) {
-        aiText = "Your whiteboard contains very few components. Consider detailing the flow of data by drawing more services and mapping out how they interact.";
-      } else {
-        if (notesCount === 0) {
-          aiText = "Your design looks clean, but you haven't added any annotation/sticky notes to describe the database schemas or protocol specifications. Consider adding a few Sticky Notes on your board to detail your design choices.";
-        } else if (arrowsCount === 0) {
-          aiText = "I see multiple infrastructure blocks, but they are not connected. How does data flow between these systems? Consider connecting your nodes with Arrows to illustrate the request flow.";
-        } else {
-          aiText = `Superb! You have mapped out a rich architecture with ${shapesCount + notesCount} components and ${arrowsCount} connection flows. How will you configure high availability and database partitioning for this setup?`;
-        }
-      }
-
-      const aiMsg: ChatMessage = {
-        id: `ai-feedback-${Date.now()}`,
-        sender: "ai",
-        text: aiText,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
-      setIsAiTyping(false);
-      toast.success("AI Feedback generated!");
-    }, 1500);
+  //WS status badge 
+  const WsBadge = () => {
+    if (wsStatus === "open")
+      return (
+        <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md border border-emerald-200/40 dark:border-emerald-800">
+          <Wifi className="h-3 w-3" /> Session Active
+        </span>
+      );
+    if (wsStatus === "connecting")
+      return (
+        <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md border border-amber-200/40 dark:border-amber-800">
+          <Loader2 className="h-3 w-3 animate-spin" /> Connecting...
+        </span>
+      );
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-md border border-rose-200/40 dark:border-rose-800">
+        <WifiOff className="h-3 w-3" /> Disconnected
+      </span>
+    );
   };
 
   return (
     <div className="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-[#08090c] text-foreground select-none overflow-hidden">
-      
-      {/* Workspace Header Navbar */}
+      {/* Header */}
       <header className="h-14 border-b border-zinc-200 dark:border-zinc-850 bg-white dark:bg-[#0a0c10] flex items-center justify-between px-6 flex-shrink-0 z-40">
         <div className="flex items-center gap-3.5">
-          <button 
+          <button
             onClick={() => {
-              if (confirm("Are you sure you want to exit the practice session? Progress will not be saved.")) {
+              if (confirm("Exit the session? Progress will not be saved.")) {
                 router.push("/interviews");
               }
             }}
@@ -231,15 +323,19 @@ export function InterviewWorkspace({ problemId }: WorkspaceLayoutProps) {
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          
+
           <div>
-            <h1 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 font-sans">{problemDetails.title}</h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal hidden sm:block truncate max-w-xs md:max-w-md font-sans">{problemDetails.desc}</p>
+            <h1 className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 font-sans">
+              {topicTitle}
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal hidden sm:block font-mono">
+              session: {sessionId.slice(0, 8)}…
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Timer status */}
+          {/* Timer */}
           <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 font-sans">
             <Clock className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
             <span className="text-xs font-semibold font-mono text-zinc-700 dark:text-zinc-300 leading-none">
@@ -247,129 +343,121 @@ export function InterviewWorkspace({ problemId }: WorkspaceLayoutProps) {
             </span>
           </div>
 
-          {/* Pause / Resume Button */}
+          {/* Pause / Resume */}
           <button
-            onClick={() => setIsTimerRunning(!isTimerRunning)}
+            onClick={() => setIsTimerRunning((v) => !v)}
             className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
-            title={isTimerRunning ? "Pause Interview Timer" : "Resume Interview Timer"}
           >
             {isTimerRunning ? (
-              <>
-                <Pause className="h-3.5 w-3.5 text-amber-500" />
-                <span className="hidden md:inline">Pause</span>
-              </>
+              <><Pause className="h-3.5 w-3.5 text-amber-500" /><span className="hidden md:inline">Pause</span></>
             ) : (
-              <>
-                <Play className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="hidden md:inline">Resume</span>
-              </>
+              <><Play className="h-3.5 w-3.5 text-emerald-500" /><span className="hidden md:inline">Resume</span></>
             )}
           </button>
 
-          {/* Get AI Feedback Button */}
+          {/* Request AI Feedback */}
           <button
-            onClick={() => {
-              const { shapesCount, notesCount, arrowsCount } = getShapesMetrics();
-              handleGetAiFeedback(shapesCount, notesCount, arrowsCount);
-            }}
-            className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
-            title="Request live evaluation feedback from the system interviewer"
+            onClick={handleGetAiFeedback}
+            disabled={wsStatus !== "open" || isAiTyping}
+            className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Request AI feedback on your current whiteboard"
           >
             <MessageSquare className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
             <span className="hidden md:inline">Request Feedback</span>
           </button>
 
-          {/* End Interview Button */}
+          {/* End Interview */}
           <button
-            onClick={() => {
-              const { shapesCount } = getShapesMetrics();
-              handleSubmitDesign(shapesCount);
-            }}
+            onClick={handleSubmitDesign}
             className="p-2 bg-rose-400 hover:bg-rose-600 text-white rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium shadow-xs font-sans"
-            title="Submit design board and complete your interview"
           >
             <CheckSquare className="h-3.5 w-3.5" />
             <span>End Interview</span>
           </button>
 
           <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-
           <ThemeToggle />
         </div>
       </header>
 
-      {/* Main Workspace split */}
+      {/* Main split */}
       <div className="flex flex-1 overflow-hidden relative w-full">
-        
-        {/* LEFT PANE: Whiteboard  */}
-        <WhiteboardCanvas setExcalidrawAPI={setExcalidrawAPI} />
+        <WhiteboardCanvas
+          setExcalidrawAPI={setExcalidrawAPI}
+          onSceneChange={handleSceneChange}
+        />
 
-        {/* RIGHT PANE:chat Panel */}
+        {/* RIGHT: AI Chat Panel */}
         <div className="w-[380px] md:w-[420px] bg-white dark:bg-[#090a0e] border-l border-zinc-200 dark:border-zinc-850 flex flex-col h-full z-10 flex-shrink-0">
-                 {/* Chat Panel Header */}
+          {/* Chat Header */}
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/10 flex items-center justify-between font-sans">
-            <div className="flex items-center gap-2">
-             
-              <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 font-sans">System Interviewer</span>
-            </div>
-            <span className="text-[10px] font-medium  bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md border border-emerald-200/40 dark:border-emerald-300 font-sans">
-              Session Active
+            <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              System Interviewer
             </span>
+            <WsBadge />
           </div>
 
-          {/* Message List area */}
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((msg) => (
-              <div 
+              <div
                 key={msg.id}
                 className={`flex flex-col max-w-[85%] ${
                   msg.sender === "user" ? "ml-auto items-end" : "mr-auto items-start"
                 }`}
               >
-                <div className={`p-3 rounded-xl text-xs leading-relaxed font-sans ${
-                  msg.sender === "user" 
-                    ? "bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 font-medium rounded-tr-none" 
-                    : "bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-800/60 rounded-tl-none"
-                }`}>
+                <div
+                  className={`p-3 rounded-xl text-xs leading-relaxed font-sans ${
+                    msg.sender === "user"
+                      ? "bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 font-medium rounded-tr-none"
+                      : "bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-800/60 rounded-tl-none"
+                  }`}
+                >
                   {msg.text}
                 </div>
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 px-1 font-sans">{msg.timestamp}</span>
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 px-1 font-sans">
+                  {msg.timestamp}
+                </span>
               </div>
             ))}
 
-            {/* Typing Indicator */}
+            {/* AI Typing indicator */}
             {isAiTyping && (
-              <div className="mr-auto items-start max-w-[85%] space-y-1">
-                <div className="p-3 bg-zinc-100 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-1 text-xs">
+              <div className="mr-auto items-start max-w-[85%]">
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input form */}
-          <form 
+          {/* Input */}
+          <form
             onSubmit={handleSendMessage}
             className="p-4 border-t border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-[#090a0e] flex items-center gap-2"
           >
             <input
               type="text"
-              placeholder="Explain your design choice or ask a question..."
+              placeholder={
+                wsStatus === "open"
+                  ? "Explain your design or ask a question..."
+                  : "AI connection unavailable..."
+              }
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 px-3.5 py-2.5 text-xs bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/30 focus:border-primary/50"
+              disabled={wsStatus !== "open"}
+              className="flex-1 px-3.5 py-2.5 text-xs bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={!inputText.trim() || isAiTyping}
+              disabled={!inputText.trim() || isAiTyping || wsStatus !== "open"}
               className="p-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-100 dark:text-zinc-900 rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
-              title="Send Message"
             >
-              <Send className="h-4.5 w-4.5" />
+              <Send className="h-4 w-4" />
             </button>
           </form>
         </div>
