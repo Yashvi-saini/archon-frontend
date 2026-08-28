@@ -1,0 +1,15 @@
+---
+description: Archon Frontend Core Architecture and Agent Guidelines
+globs: **/*.ts, **/*.tsx
+---
+
+# Archon Frontend Agent Rule
+
+Refer to `AGENTS.md` for full project guidelines and architecture details.
+
+## Core Principles:
+- **Thin-Shell Routing:** `src/app/` pages are thin routing shells without business logic.
+- **Feature-First Domain Modules:** All business logic lives in `src/features/[feature_name]/`.
+- **3-Layer Data Flow:** API function ➔ React Query Hook ➔ UI Component.
+- **Zustand & React Query:** React Query for server data, Zustand for interactive workspace state.
+- **Path Aliases:** Use `@/...` for internal imports.

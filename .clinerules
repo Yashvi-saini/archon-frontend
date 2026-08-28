@@ -1,0 +1,13 @@
+# .clinerules — Cline / Roo Code AI Context Rules
+
+Always read and enforce the project architecture and coding standards outlined in `AGENTS.md`.
+
+## Key Rules for Cline Agent:
+1. **Thin-Shell Routing:** Do not place business logic or complex state inside `src/app/`. Keep pages as thin wrappers importing components from `src/features/`.
+2. **Feature-First Architecture:** Place domain logic inside `src/features/[feature_name]/` (`auth`, `interview`, `reports`, `analytics`, `profile`).
+3. **Data Flow:** Flow data using: Raw API (`features/X/api`) ➔ React Query Hook (`features/X/hooks`) ➔ UI Component (`features/X/components`).
+4. **State Management:** Use Zustand for complex UI/workspace state and React Query for server state.
+5. **Path Aliases:** Use `@/` for imports (e.g. `@/components/ui/button`).
+6. **Styling:** Use Tailwind CSS v4 and `cn()` from `@/lib/utils`.
+
+For details, refer to `AGENTS.md` and `architecture.md`.
