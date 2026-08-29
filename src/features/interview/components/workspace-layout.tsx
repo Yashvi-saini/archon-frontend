@@ -95,24 +95,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
   const [excalidrawAPI, setExcalidrawAPI] = useState<unknown>(null);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "ai-welcome",
-      sender: "ai",
-      text: `Welcome to your ${topicTitle} session. Place components on the whiteboard — every node and connection you draw is sent to the AI in real time. Ask questions or explain your choices below.`,
-      timestamp: "",
-    },
-  ]);
-
-  useEffect(() => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === "ai-welcome" && m.timestamp === ""
-          ? { ...m, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
-          : m
-      )
-    );
-  }, []);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -120,7 +103,18 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const lastMsgRef = useRef<{ text: string; at: number } | null>(null);
+
   const addMessage = useCallback((msg: ChatMessage) => {
+    const now = Date.now();
+    if (
+      lastMsgRef.current &&
+      lastMsgRef.current.text === msg.text &&
+      now - lastMsgRef.current.at < 3000
+    ) {
+      return;
+    }
+    lastMsgRef.current = { text: msg.text, at: now };
     setMessages((prev) => [...prev, msg]);
   }, []);
 
@@ -409,6 +403,17 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Empty state while WS is connecting */}
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full gap-2 text-center py-12">
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">Connecting to AI interviewer...</p>
+              </div>
+            )}
             {messages.map((msg) => (
               <div
                 key={msg.id}
