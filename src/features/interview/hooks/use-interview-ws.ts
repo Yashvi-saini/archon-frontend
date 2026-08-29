@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useRef, useCallback, useState } from "react";
 import { buildChatWsUrl } from "../api/interview";
 import type {
@@ -34,11 +33,10 @@ export function useInterviewWs(
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const [isAiTyping, setIsAiTyping] = useState(false);
 
-  // Keep onMessage stable via ref
+
   const onMessageRef = useRef(onMessage);
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 
-  // Connect / Disconnect
   useEffect(() => {
     if (!sessionId) return;
 
@@ -47,29 +45,42 @@ export function useInterviewWs(
       : null;
 
     if (!token) {
-      console.warn("[WS] No access token found — skipping WebSocket connection.");
+      console.warn("[WS] No access token — skipping connection.");
       setWsStatus("error");
       return;
     }
+
+
+    let active = true;
 
     const url = buildChatWsUrl(sessionId);
     const ws = new WebSocket(url);
     wsRef.current = ws;
     setWsStatus("connecting");
 
-    ws.onopen = () => setWsStatus("open");
+    ws.onopen = () => {
+      if (!active) { ws.close(); return; }
+      setWsStatus("open");
+    };
 
     ws.onclose = () => {
+      if (!active) return; 
       setWsStatus("closed");
       setIsAiTyping(false);
     };
 
     ws.onerror = () => {
+      if (!active) return; 
       setWsStatus("error");
       setIsAiTyping(false);
     };
 
     ws.onmessage = (event: MessageEvent) => {
+      if (!active) {
+        ws.close();
+        return;
+      }
+
       try {
         const parsed: WsIncomingMessage = JSON.parse(event.data as string);
 
@@ -87,6 +98,7 @@ export function useInterviewWs(
           onMessageRef.current(aiMsg);
         }
       } catch {
+        // Fallback: treat raw non-JSON string as AI text
         const raw = event.data as string;
         if (raw?.trim()) {
           setIsAiTyping(false);
@@ -104,21 +116,23 @@ export function useInterviewWs(
     };
 
     return () => {
+      active = false;
       ws.close();
       wsRef.current = null;
     };
   }, [sessionId]);
 
-  //Internal send helper
+
   const send = useCallback(<T>(type: WsOutgoingType, data: T) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn(`[WS] Cannot send "${type}" — socket not open (state=${ws?.readyState})`);
+      console.warn(`[WS] Cannot send "${type}" — not open (state=${ws?.readyState})`);
       return;
     }
     const envelope: WsEnvelope<T> = { type, data };
     ws.send(JSON.stringify(envelope));
   }, []);
+
 
   const sendChat = useCallback((text: string) => {
     setIsAiTyping(true);
@@ -142,7 +156,6 @@ export function useInterviewWs(
     },
     [send]
   );
-
 
   const sendEdgeDeleted = useCallback((id: string) => {
     send<WsEdgeDeletedData>("edge_deleted", { id });

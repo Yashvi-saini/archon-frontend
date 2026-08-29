@@ -103,18 +103,8 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const lastMsgRef = useRef<{ text: string; at: number } | null>(null);
 
   const addMessage = useCallback((msg: ChatMessage) => {
-    const now = Date.now();
-    if (
-      lastMsgRef.current &&
-      lastMsgRef.current.text === msg.text &&
-      now - lastMsgRef.current.at < 3000
-    ) {
-      return;
-    }
-    lastMsgRef.current = { text: msg.text, at: now };
     setMessages((prev) => [...prev, msg]);
   }, []);
 
