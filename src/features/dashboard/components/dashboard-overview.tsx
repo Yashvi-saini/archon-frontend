@@ -66,7 +66,7 @@ export function DashboardOverview() {
 
       <RecommendedScenarioHero scenario={recommendedScenario} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className=" grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CompetencyRadarCard metrics={competencies} />
         <RecentInterviewsList interviews={recentInterviews} />
       </div>
