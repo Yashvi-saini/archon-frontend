@@ -2,12 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { StatsSummaryCards } from "./stats-summary-cards";
 import { RecommendedScenarioHero } from "./recommended-scenario-hero";
 import { CompetencyRadarCard } from "./competency-radar";
 import { RecentInterviewsList } from "./recent-interviews-list";
 import { TopicRoadmapCard } from "./topic-roadmap";
+import { useDashboardOverview } from "../hooks/use-dashboard-overview";
 import {
   MOCK_DASHBOARD_STATS,
   MOCK_RECOMMENDED_SCENARIO,
@@ -17,6 +18,14 @@ import {
 } from "../constants";
 
 export function DashboardOverview() {
+  const { data, isLoading } = useDashboardOverview();
+
+  const stats = data?.stats ?? MOCK_DASHBOARD_STATS;
+  const recommendedScenario = data?.recommendedScenario ?? MOCK_RECOMMENDED_SCENARIO;
+  const competencies = data?.competencies ?? MOCK_COMPETENCIES;
+  const recentInterviews = data?.recentInterviews ?? MOCK_RECENT_INTERVIEWS;
+  const roadmap = data?.roadmap ?? MOCK_ROADMAP;
+
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -28,6 +37,9 @@ export function DashboardOverview() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
               Active Candidate
             </span>
+            {isLoading && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+            )}
           </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             System design interview readiness, practice metrics, and AI evaluations.
@@ -50,16 +62,16 @@ export function DashboardOverview() {
         </div>
       </div>
 
-      <StatsSummaryCards stats={MOCK_DASHBOARD_STATS} />
+      <StatsSummaryCards stats={stats} />
 
-      <RecommendedScenarioHero scenario={MOCK_RECOMMENDED_SCENARIO} />
+      <RecommendedScenarioHero scenario={recommendedScenario} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CompetencyRadarCard metrics={MOCK_COMPETENCIES} />
-        <RecentInterviewsList interviews={MOCK_RECENT_INTERVIEWS} />
+        <CompetencyRadarCard metrics={competencies} />
+        <RecentInterviewsList interviews={recentInterviews} />
       </div>
 
-      <TopicRoadmapCard topics={MOCK_ROADMAP} />
+      <TopicRoadmapCard topics={roadmap} />
     </div>
   );
 }

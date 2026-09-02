@@ -39,6 +39,14 @@ export interface RoadmapTopic {
   category: string;
   completedLessons: number;
   totalLessons: number;
-  mastery: number; // 0-100
+  mastery: number;
   status: "completed" | "in_progress" | "locked";
+}
+
+export interface DashboardOverviewData {
+  stats: DashboardStats;
+  recommendedScenario: RecommendedScenario;
+  competencies: CompetencyMetric[];
+  recentInterviews: RecentInterviewItem[];
+  roadmap: RoadmapTopic[];
 }
