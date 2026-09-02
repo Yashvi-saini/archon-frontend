@@ -2,8 +2,8 @@ export type ReportDifficulty = "beginner" | "intermediate" | "senior" | "staff";
 
 export interface RubricCategory {
   name: string;
-  score: number; // 0-100
-  weight: number; // e.g. 20%
+  score: number;
+  weight: number;
   summary: string;
   feedbackPoints: string[];
 }
@@ -23,6 +23,17 @@ export interface DetailedReport {
   weaknesses: string[];
   recommendations: string[];
   diagramComponents: string[];
+}
+
+export interface ReportsSummary {
+  totalReports: number;
+  averageScore: number;
+  highestScore: number;
+}
+
+export interface ReportsListResult {
+  summary: ReportsSummary;
+  reports: DetailedReport[];
 }
 
 export interface ReportFilter {
