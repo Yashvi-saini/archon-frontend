@@ -9,7 +9,6 @@ import type {
   WsNodeDeletedData,
   WsEdgeData,
   WsEdgeDeletedData,
-  WsIncomingMessage,
   ChatMessage,
 } from "../types";
 
@@ -23,6 +22,7 @@ export interface UseInterviewWsReturn {
   sendEdgeEvent: (type: "edge_added" | "edge_updated", data: WsEdgeData) => void;
   sendEdgeDeleted: (id: string) => void;
   isAiTyping: boolean;
+  cancelAiTyping: () => void;
 }
 
 export function useInterviewWs(
@@ -32,17 +32,28 @@ export function useInterviewWs(
   const wsRef = useRef<WebSocket | null>(null);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const [isAiTyping, setIsAiTyping] = useState(false);
-
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onMessageRef = useRef(onMessage);
-  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
+  const cancelAiTyping = useCallback(() => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    setIsAiTyping(false);
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
 
-    const token = typeof window !== "undefined"
-      ? localStorage.getItem("archon_access_token")
-      : null;
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("archon_access_token")
+        : null;
 
     if (!token) {
       console.warn("[WS] No access token — skipping connection.");
@@ -50,46 +61,88 @@ export function useInterviewWs(
       return;
     }
 
-
     let active = true;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    const url = buildChatWsUrl(sessionId);
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-    setWsStatus("connecting");
+    const connect = () => {
+      if (!active) return;
 
-    ws.onopen = () => {
-      if (!active) { ws.close(); return; }
-      setWsStatus("open");
-    };
+      const url = buildChatWsUrl(sessionId);
+      console.log("[WS] Connecting to:", url);
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+      setWsStatus("connecting");
 
-    ws.onclose = () => {
-      if (!active) return; 
-      setWsStatus("closed");
-      setIsAiTyping(false);
-    };
+      ws.onopen = () => {
+        if (!active) {
+          ws.close();
+          return;
+        }
+        console.log("[WS] Connection opened successfully");
+        setWsStatus("open");
+      };
 
-    ws.onerror = () => {
-      if (!active) return; 
-      setWsStatus("error");
-      setIsAiTyping(false);
-    };
+      ws.onclose = (event) => {
+        if (!active) return;
+        console.log("[WS] Connection closed:", event.code, event.reason);
+        setWsStatus("closed");
+        cancelAiTyping();
 
-    ws.onmessage = (event: MessageEvent) => {
-      if (!active) {
-        ws.close();
-        return;
-      }
+        // Auto-reconnect after 3 seconds if not deliberately unmounted
+        if (active) {
+          reconnectTimeout = setTimeout(() => {
+            if (active) connect();
+          }, 3000);
+        }
+      };
 
-      try {
-        const parsed: WsIncomingMessage = JSON.parse(event.data as string);
+      ws.onerror = (err) => {
+        if (!active) return;
+        console.error("[WS] Connection error:", err);
+        setWsStatus("error");
+        cancelAiTyping();
+      };
 
-        if (parsed.role === "ai" && parsed.content) {
-          setIsAiTyping(false);
+      ws.onmessage = (event: MessageEvent) => {
+        if (!active) return;
+
+        const rawData = typeof event.data === "string" ? event.data : "";
+        console.log("[WS Received]:", rawData);
+
+        let extractedText: string | null = null;
+
+        try {
+          const parsed = JSON.parse(rawData);
+
+          if (parsed && typeof parsed === "object") {
+            // Ignore echoes of our own user messages
+            if (parsed.role === "user" || parsed.sender === "user") {
+              return;
+            }
+
+            extractedText =
+              parsed.content ||
+              parsed.response ||
+              parsed.text ||
+              parsed.message ||
+              (typeof parsed.data === "string"
+                ? parsed.data
+                : parsed.data?.content || parsed.data?.response) ||
+              null;
+          }
+        } catch {
+          if (rawData.trim()) {
+            extractedText = rawData.trim();
+          }
+        }
+
+        if (extractedText) {
+          cancelAiTyping();
+
           const aiMsg: ChatMessage = {
-            id: `ai-${Date.now()}`,
+            id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             sender: "ai",
-            text: parsed.content,
+            text: extractedText,
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -97,47 +150,60 @@ export function useInterviewWs(
           };
           onMessageRef.current(aiMsg);
         }
-      } catch {
-        // Fallback: treat raw non-JSON string as AI text
-        const raw = event.data as string;
-        if (raw?.trim()) {
+      };
+    };
+
+    connect();
+
+    return () => {
+      active = false;
+      cancelAiTyping();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [sessionId, cancelAiTyping]);
+
+  const send = useCallback(<T>(type: WsOutgoingType, data: T): boolean => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.warn(`[WS] Cannot send "${type}" — not open (state=${ws?.readyState})`);
+      return false;
+    }
+    const envelope: WsEnvelope<T> = { type, data };
+    console.log("[WS Sent]:", envelope);
+    ws.send(JSON.stringify(envelope));
+    return true;
+  }, []);
+
+  const sendChat = useCallback(
+    (text: string) => {
+      const sent = send<string>("chat", text);
+      if (sent) {
+        setIsAiTyping(true);
+
+        // Safety timeout: 25 seconds
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
           setIsAiTyping(false);
           onMessageRef.current({
-            id: `ai-raw-${Date.now()}`,
+            id: `ai-timeout-${Date.now()}`,
             sender: "ai",
-            text: raw,
+            text: "The AI interviewer took too long to respond. The system may still be processing your previous answer, or you can try sending your clarification again.",
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
           });
-        }
+        }, 25000);
+      } else {
+        cancelAiTyping();
       }
-    };
-
-    return () => {
-      active = false;
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [sessionId]);
-
-
-  const send = useCallback(<T>(type: WsOutgoingType, data: T) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn(`[WS] Cannot send "${type}" — not open (state=${ws?.readyState})`);
-      return;
-    }
-    const envelope: WsEnvelope<T> = { type, data };
-    ws.send(JSON.stringify(envelope));
-  }, []);
-
-
-  const sendChat = useCallback((text: string) => {
-    setIsAiTyping(true);
-    send<string>("chat", text);
-  }, [send]);
+    },
+    [send, cancelAiTyping]
+  );
 
   const sendNodeEvent = useCallback(
     (type: "node_added" | "node_updated", data: WsNodeData) => {
@@ -146,9 +212,12 @@ export function useInterviewWs(
     [send]
   );
 
-  const sendNodeDeleted = useCallback((id: string) => {
-    send<WsNodeDeletedData>("node_deleted", { id });
-  }, [send]);
+  const sendNodeDeleted = useCallback(
+    (id: string) => {
+      send<WsNodeDeletedData>("node_deleted", { id });
+    },
+    [send]
+  );
 
   const sendEdgeEvent = useCallback(
     (type: "edge_added" | "edge_updated", data: WsEdgeData) => {
@@ -157,9 +226,12 @@ export function useInterviewWs(
     [send]
   );
 
-  const sendEdgeDeleted = useCallback((id: string) => {
-    send<WsEdgeDeletedData>("edge_deleted", { id });
-  }, [send]);
+  const sendEdgeDeleted = useCallback(
+    (id: string) => {
+      send<WsEdgeDeletedData>("edge_deleted", { id });
+    },
+    [send]
+  );
 
   return {
     wsStatus,
@@ -169,5 +241,6 @@ export function useInterviewWs(
     sendEdgeEvent,
     sendEdgeDeleted,
     isAiTyping,
+    cancelAiTyping,
   };
 }

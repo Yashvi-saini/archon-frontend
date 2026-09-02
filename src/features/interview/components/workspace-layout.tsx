@@ -117,6 +117,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     sendEdgeEvent,
     sendEdgeDeleted,
     isAiTyping,
+    cancelAiTyping,
   } = useInterviewWs(sessionId, addMessage);
 
   useEffect(() => {
@@ -443,12 +444,20 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
             {/* AI Typing indicator */}
             {isAiTyping && (
-              <div className="mr-auto items-start max-w-[85%]">
-                <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-1">
+              <div className="mr-auto items-start max-w-[85%] flex items-center gap-2">
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
+                <button
+                  type="button"
+                  onClick={cancelAiTyping}
+                  className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline cursor-pointer"
+                  title="Dismiss loading state"
+                >
+                  Dismiss
+                </button>
               </div>
             )}
 
@@ -474,7 +483,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             />
             <button
               type="submit"
-              disabled={!inputText.trim() || isAiTyping || wsStatus !== "open"}
+              disabled={!inputText.trim() || wsStatus !== "open"}
               className="p-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-100 dark:text-zinc-900 rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
             >
               <Send className="h-4 w-4" />
