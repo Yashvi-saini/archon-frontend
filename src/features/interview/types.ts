@@ -29,10 +29,10 @@ export interface InterviewReport {
   id: string;
   user_id: number;
   question_id: string;
-  score: number;
-  feedback: number[];
+  score: number | null;
+  feedback: string | Record<string, any> | null;
   started_at: string;
-  ended_at: string;
+  ended_at: string | null;
   deleted_at: string | null;
 }
 

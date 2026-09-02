@@ -70,6 +70,34 @@ export async function getInterviewReport(
   return { status: "done", report: data?.data ?? data };
 }
 
+export async function submitInterview(sessionId: string): Promise<{ message: string }> {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not authenticated. Please log in.");
+
+  const res = await fetch(
+    `${API_BASE_URL}/api/v1/interviews/${sessionId}/submit`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(
+      errBody?.error ||
+      errBody?.message ||
+      `Failed to submit interview (${res.status})`
+    );
+  }
+
+  const data = await res.json();
+  return data;
+}
+
 export function buildChatWsUrl(sessionId: string): string {
   const token = getAccessToken() ?? "";
   // Convert http(s) → ws(s)

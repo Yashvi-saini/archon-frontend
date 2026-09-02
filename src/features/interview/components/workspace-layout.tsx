@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { WhiteboardCanvas } from "./canvas/whiteboard-canvas";
 import { useInterviewWs } from "../hooks/use-interview-ws";
+import { useSubmitInterview } from "../hooks/use-submit-interview";
 import type {
   ChatMessage,
   ExcalidrawElementSnapshot,
@@ -273,11 +274,20 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     toast.info("Requesting AI feedback...");
   };
 
+  const submitInterviewMutation = useSubmitInterview();
+
   //  Submit interview 
-  const handleSubmitDesign = () => {
+  const handleSubmitDesign = async () => {
     setIsTimerRunning(false);
-    toast.success("Interview submitted! Generating evaluation report...");
-    router.push("/reports");
+    toast.loading("Submitting interview to AI...", { id: "submit-interview" });
+    try {
+      await submitInterviewMutation.mutateAsync(sessionId);
+      toast.success("Interview submitted! Generating evaluation report...", { id: "submit-interview" });
+      router.push(`/reports?session_id=${encodeURIComponent(sessionId)}`);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to submit interview";
+      toast.error(errorMsg, { id: "submit-interview" });
+    }
   };
 
   //WS status badge 
@@ -363,10 +373,15 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           {/* End Interview */}
           <button
             onClick={handleSubmitDesign}
-            className="p-2 bg-rose-400 hover:bg-rose-600 text-white rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium shadow-xs font-sans"
+            disabled={submitInterviewMutation.isPending}
+            className="p-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium shadow-xs font-sans disabled:cursor-not-allowed"
           >
-            <CheckSquare className="h-3.5 w-3.5" />
-            <span>End Interview</span>
+            {submitInterviewMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <CheckSquare className="h-3.5 w-3.5" />
+            )}
+            <span>{submitInterviewMutation.isPending ? "Submitting..." : "End Interview"}</span>
           </button>
 
           <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
