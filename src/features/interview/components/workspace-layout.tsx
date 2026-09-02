@@ -116,6 +116,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     sendNodeEvent,
     sendNodeDeleted,
     sendEdgeEvent,
+    sendEdgeDeleted,
     isAiTyping,
     cancelAiTyping,
     reconnect,
