@@ -8,17 +8,27 @@ import { ActivityHeatmap } from "./activity-heatmap";
 import { PitfallInsights } from "./pitfall-insights";
 import { MOCK_ANALYTICS } from "../constants";
 import type { TimeRange } from "../types";
+import { useAnalytics } from "../hooks/use-analytics";
+import { Loader2 } from "lucide-react";
 
 export function AnalyticsView() {
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
+  const { data, isLoading } = useAnalytics(timeRange);
+
+  const analytics = data ?? MOCK_ANALYTICS;
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
-            System Design Analytics & Telemetry
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+              System Design Analytics & Telemetry
+            </h1>
+            {isLoading && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+            )}
+          </div>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Quantified architectural benchmarks, radar skills, and practice metrics.
           </p>
@@ -46,21 +56,21 @@ export function AnalyticsView() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5">
           <ReadinessIndexGauge
-            score={MOCK_ANALYTICS.readinessScore}
-            percentile={MOCK_ANALYTICS.percentile}
-            targetLevel={MOCK_ANALYTICS.targetLevel}
+            score={analytics.readinessScore}
+            percentile={analytics.percentile}
+            targetLevel={analytics.targetLevel}
           />
         </div>
         <div className="lg:col-span-7">
-          <PerformanceTrendChart data={MOCK_ANALYTICS.trend} />
+          <PerformanceTrendChart data={analytics.trend} />
         </div>
       </div>
 
-      <DomainMasteryMatrix domains={MOCK_ANALYTICS.domainMastery} />
+      <DomainMasteryMatrix domains={analytics.domainMastery} />
 
-      <ActivityHeatmap days={MOCK_ANALYTICS.heatmapDays} />
+      <ActivityHeatmap days={analytics.heatmapDays} />
 
-      <PitfallInsights pitfalls={MOCK_ANALYTICS.pitfalls} />
+      <PitfallInsights pitfalls={analytics.pitfalls} />
     </div>
   );
 }
