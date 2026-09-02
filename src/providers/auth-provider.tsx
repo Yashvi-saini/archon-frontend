@@ -53,7 +53,7 @@ function isPublicRoute(pathname: string): boolean {
   });
 }
 
-const PROTECTED_ROUTES = ["/dashboard", "/interviews", "/reports", "/analytics", "/settings"];
+const PROTECTED_ROUTES = ["/dashboard", "/interviews", "/reports", "/analytics", "/settings", "/quiz"];
 
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_ROUTES.some((route) => {
