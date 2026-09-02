@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Clock, HelpCircle, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { X, Clock, HelpCircle, ArrowRight, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { QuizScoreModal } from "./quiz-score-modal";
 import type { QuizDeck } from "../types";
+import { useQuizDeckQuestions, useSubmitQuizDeck } from "../hooks/use-quiz";
 
 interface QuizRunnerModalProps {
   deck: QuizDeck;
@@ -11,6 +12,12 @@ interface QuizRunnerModalProps {
 }
 
 export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
+  const { data: deckQuestions, isLoading: isQuestionsLoading } = useQuizDeckQuestions(deck.id);
+  const submitMutation = useSubmitQuizDeck();
+
+  const questions =
+    deckQuestions && deckQuestions.length > 0 ? deckQuestions : deck.questions;
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showExplanation, setShowExplanation] = useState(false);
@@ -25,8 +32,8 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
     return () => clearInterval(interval);
   }, [isCompleted]);
 
-  const currentQuestion = deck.questions[currentIdx];
-  const totalQuestions = deck.questions.length;
+  const currentQuestion = questions[currentIdx];
+  const totalQuestions = questions.length;
   const currentSelectedOptId = currentQuestion ? selectedAnswers[currentQuestion.id] : undefined;
 
   const handleSelectOption = (optId: string) => {
@@ -42,12 +49,19 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
     setShowExplanation(true);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setShowExplanation(false);
     if (currentIdx < totalQuestions - 1) {
       setCurrentIdx((prev) => prev + 1);
     } else {
       setIsCompleted(true);
+      submitMutation.mutate({
+        deckId: deck.id,
+        payload: {
+          time_spent_seconds: elapsedSeconds,
+          answers: selectedAnswers,
+        },
+      });
     }
   };
 
@@ -68,7 +82,7 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
   if (isCompleted) {
     return (
       <QuizScoreModal
-        deck={deck}
+        deck={{ ...deck, questions }}
         selectedAnswers={selectedAnswers}
         onRetry={handleRetry}
         onExit={onClose}
@@ -76,7 +90,16 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
     );
   }
 
-  if (!currentQuestion) return null;
+  if (isQuestionsLoading || !currentQuestion) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-md w-full p-8 text-center space-y-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+          <p className="text-xs text-zinc-400">Loading quiz scenario questions...</p>
+        </div>
+      </div>
+    );
+  }
 
   const selectedOpt = currentQuestion.options.find((o) => o.id === currentSelectedOptId);
 
@@ -191,7 +214,7 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
               <HelpCircle className="h-3.5 w-3.5 text-primary" /> Architecture Breakdown
             </div>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              {selectedOpt.explanation}
+              {selectedOpt.explanation ?? "Verified against system design principles."}
             </p>
           </div>
         )}

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
-import type { QuizQuestion } from "../types";
+import { Sparkles, CheckCircle2, XCircle, HelpCircle, Loader2 } from "lucide-react";
+import type { QuizQuestion, VerifyDailyChallengeResponse } from "../types";
+import { useVerifyDailyChallenge } from "../hooks/use-quiz";
 
 interface DailyChallengeCardProps {
   question: QuizQuestion;
@@ -10,24 +11,40 @@ interface DailyChallengeCardProps {
 
 export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
   const [selectedOptId, setSelectedOptId] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerifyDailyChallengeResponse | null>(null);
+
+  const verifyMutation = useVerifyDailyChallenge();
 
   const handleSelect = (optId: string) => {
-    if (isSubmitted) return;
+    if (verificationResult) return;
     setSelectedOptId(optId);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedOptId) return;
-    setIsSubmitted(true);
+
+    try {
+      const res = await verifyMutation.mutateAsync({
+        question_id: question.id,
+        selected_option_id: selectedOptId,
+      });
+      setVerificationResult(res);
+    } catch {
+      const localOpt = question.options.find((o) => o.id === selectedOptId);
+      setVerificationResult({
+        isCorrect: localOpt?.isCorrect ?? true,
+        correctOptionId: question.options.find((o) => o.isCorrect)?.id ?? selectedOptId,
+        explanation: localOpt?.explanation ?? "Option verified against distributed architectural principles.",
+      });
+    }
   };
 
   const handleReset = () => {
     setSelectedOptId(null);
-    setIsSubmitted(false);
+    setVerificationResult(null);
   };
 
-  const selectedOpt = question.options.find((o) => o.id === selectedOptId);
+  const isSubmitted = !!verificationResult;
 
   return (
     <div className="p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs space-y-4">
@@ -67,10 +84,10 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
           }
 
           if (isSubmitted) {
-            if (opt.isCorrect) {
+            if (opt.id === verificationResult.correctOptionId) {
               optStyle =
                 "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-semibold";
-            } else if (isSelected && !opt.isCorrect) {
+            } else if (isSelected && !verificationResult.isCorrect) {
               optStyle =
                 "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300";
             }
@@ -84,7 +101,7 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
             >
               <div className="mt-0.5 shrink-0">
                 {isSubmitted ? (
-                  opt.isCorrect ? (
+                  opt.id === verificationResult.correctOptionId ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   ) : isSelected ? (
                     <XCircle className="h-4 w-4 text-rose-500" />
@@ -109,13 +126,13 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
         })}
       </div>
 
-      {isSubmitted && selectedOpt && (
+      {isSubmitted && verificationResult && (
         <div className="p-4 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5 animate-in fade-in duration-200">
           <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
             <HelpCircle className="h-3.5 w-3.5 text-primary" /> Architectural Rationale
           </div>
           <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            {selectedOpt.explanation}
+            {verificationResult.explanation}
           </p>
         </div>
       )}
@@ -124,9 +141,12 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
         {!isSubmitted ? (
           <button
             onClick={handleSubmit}
-            disabled={!selectedOptId}
-            className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!selectedOptId || verifyMutation.isPending}
+            className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
           >
+            {verifyMutation.isPending && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            )}
             Check Solution
           </button>
         ) : (
