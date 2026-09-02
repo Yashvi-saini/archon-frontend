@@ -98,6 +98,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
+  const [typingSeconds, setTypingSeconds] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,16 +116,54 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     sendNodeEvent,
     sendNodeDeleted,
     sendEdgeEvent,
-    sendEdgeDeleted,
     isAiTyping,
     cancelAiTyping,
+    reconnect,
   } = useInterviewWs(sessionId, addMessage);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (isAiTyping) {
+      setTypingSeconds(0);
+      interval = setInterval(() => setTypingSeconds((s) => s + 1), 1000);
+    } else {
+      setTypingSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [isAiTyping]);
+
+  const getTypingStatusText = (secs: number) => {
+    if (secs < 3) return "Interviewer is thinking...";
+    if (secs < 8) return "Analyzing system design requirements...";
+    if (secs < 14) return "Synthesizing follow-up questions...";
+    return "Finalizing response from AI...";
+  };
 
   useEffect(() => {
     if (wsStatus === "open") toast.success("AI Interviewer connected", { id: "ws-status", duration: 2000 });
     else if (wsStatus === "error") toast.error("AI connection error", { id: "ws-status" });
     else if (wsStatus === "closed") toast.warning("AI connection closed", { id: "ws-status", duration: 3000 });
   }, [wsStatus]);
+
+  // If connected and no history returned from server, prompt candidate immediately
+  useEffect(() => {
+    if (wsStatus === "open" && messages.length === 0) {
+      const timer = setTimeout(() => {
+        setMessages((prev) => {
+          if (prev.length > 0) return prev;
+          return [
+            {
+              id: `ai-init-${Date.now()}`,
+              sender: "ai",
+              text: `Hello! Thanks for joining today - let's dive into designing ${topicTitle}. Could you clarify any specific requirements, concurrency, or any key features you'd like to focus on?`,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            },
+          ];
+        });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [wsStatus, messages.length, topicTitle]);
 
   const prevElementsRef = useRef<Map<string, ExcalidrawElementSnapshot>>(new Map());
   const pendingElementsRef = useRef<readonly ExcalidrawElementSnapshot[] | null>(null);
@@ -411,13 +450,38 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Empty state while WS is connecting */}
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-2 text-center py-12">
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500">Connecting to AI interviewer...</p>
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12 px-4">
+                {wsStatus === "error" || wsStatus === "closed" ? (
+                  <>
+                    <div className="p-3 bg-rose-500/10 text-rose-500 rounded-full">
+                      <WifiOff className="h-5 w-5" />
+                    </div>
+                    <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                      AI Interviewer Disconnected
+                    </p>
+                    <p className="text-[11px] text-zinc-400 max-w-xs">
+                      The WebSocket session was interrupted or your token expired.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => reconnect()}
+                      className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Reconnect
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                      {wsStatus === "open" ? "Starting interview session..." : "Connecting to AI interviewer..."}
+                    </p>
+                  </>
+                )}
               </div>
             )}
             {messages.map((msg) => (
@@ -444,20 +508,28 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
             {/* AI Typing indicator */}
             {isAiTyping && (
-              <div className="mr-auto items-start max-w-[85%] flex items-center gap-2">
-                <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div className="mr-auto items-start max-w-[90%] space-y-1">
+                <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-sans">
+                    {getTypingStatusText(typingSeconds)}{" "}
+                    <span className="text-[10px] text-zinc-400 font-mono">({typingSeconds}s)</span>
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={cancelAiTyping}
-                  className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline cursor-pointer"
-                  title="Dismiss loading state"
-                >
-                  Dismiss
-                </button>
+                <div className="flex items-center gap-2 px-1">
+                  <button
+                    type="button"
+                    onClick={cancelAiTyping}
+                    className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline cursor-pointer"
+                    title="Unlock chat input"
+                  >
+                    Cancel wait & unlock input
+                  </button>
+                </div>
               </div>
             )}
 

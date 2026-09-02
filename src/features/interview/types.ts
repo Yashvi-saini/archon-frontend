@@ -17,7 +17,19 @@ export interface Question {
 }
 
 export interface CreateInterviewRequest {
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: "easy" | "medium" | "hard" | "senior" | "staff" | string;
+  question_id?: string;
+}
+
+export interface UserInterviewSummary {
+  id: string;
+  user_id: number;
+  question_id: string;
+  score: number | null;
+  feedback: unknown;
+  started_at: string;
+  ended_at: string | null;
+  deleted_at: string | null;
 }
 
 export interface StartInterviewResponse {

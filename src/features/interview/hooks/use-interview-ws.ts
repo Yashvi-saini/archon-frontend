@@ -23,6 +23,7 @@ export interface UseInterviewWsReturn {
   sendEdgeDeleted: (id: string) => void;
   isAiTyping: boolean;
   cancelAiTyping: () => void;
+  reconnect: () => void;
 }
 
 export function useInterviewWs(
@@ -47,25 +48,62 @@ export function useInterviewWs(
     setIsAiTyping(false);
   }, []);
 
+  const connectRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     if (!sessionId) return;
-
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem("archon_access_token")
-        : null;
-
-    if (!token) {
-      console.warn("[WS] No access token — skipping connection.");
-      setWsStatus("error");
-      return;
-    }
 
     let active = true;
     let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
+    const tryRefreshToken = async () => {
+      if (typeof window === "undefined") return;
+      const refreshToken = localStorage.getItem("archon_refresh_token");
+      if (!refreshToken) return;
+
+      try {
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+        const res = await fetch(`${apiBaseUrl}/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          const newAccessToken =
+            data?.access_token ||
+            data?.data?.access_token ||
+            data?.accessToken;
+          if (newAccessToken) {
+            localStorage.setItem("archon_access_token", newAccessToken);
+            console.log("[WS] Refreshed token successfully for WebSocket");
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
     const connect = () => {
       if (!active) return;
+
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("archon_access_token")
+          : null;
+
+      if (!token) {
+        console.warn("[WS] No access token — attempting token refresh before connect");
+        tryRefreshToken().then(() => {
+          if (active && localStorage.getItem("archon_access_token")) {
+            connect();
+          } else {
+            setWsStatus("error");
+          }
+        });
+        return;
+      }
 
       const url = buildChatWsUrl(sessionId);
       console.log("[WS] Connecting to:", url);
@@ -78,7 +116,7 @@ export function useInterviewWs(
           ws.close();
           return;
         }
-        console.log("[WS] Connection opened successfully");
+        console.log("[WS] Connected successfully");
         setWsStatus("open");
       };
 
@@ -88,19 +126,22 @@ export function useInterviewWs(
         setWsStatus("closed");
         cancelAiTyping();
 
-        // Auto-reconnect after 3 seconds if not deliberately unmounted
         if (active) {
-          reconnectTimeout = setTimeout(() => {
-            if (active) connect();
+          reconnectTimeout = setTimeout(async () => {
+            if (active) {
+              await tryRefreshToken();
+              connect();
+            }
           }, 3000);
         }
       };
 
-      ws.onerror = (err) => {
+      ws.onerror = async (err) => {
         if (!active) return;
         console.error("[WS] Connection error:", err);
         setWsStatus("error");
         cancelAiTyping();
+        await tryRefreshToken();
       };
 
       ws.onmessage = (event: MessageEvent) => {
@@ -115,7 +156,6 @@ export function useInterviewWs(
           const parsed = JSON.parse(rawData);
 
           if (parsed && typeof parsed === "object") {
-            // Ignore echoes of our own user messages
             if (parsed.role === "user" || parsed.sender === "user") {
               return;
             }
@@ -153,6 +193,7 @@ export function useInterviewWs(
       };
     };
 
+    connectRef.current = connect;
     connect();
 
     return () => {
@@ -165,6 +206,13 @@ export function useInterviewWs(
       }
     };
   }, [sessionId, cancelAiTyping]);
+
+  const reconnect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+    connectRef.current();
+  }, []);
 
   const send = useCallback(<T>(type: WsOutgoingType, data: T): boolean => {
     const ws = wsRef.current;
@@ -184,7 +232,6 @@ export function useInterviewWs(
       if (sent) {
         setIsAiTyping(true);
 
-        // Safety timeout: 25 seconds
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
           setIsAiTyping(false);
@@ -242,5 +289,6 @@ export function useInterviewWs(
     sendEdgeDeleted,
     isAiTyping,
     cancelAiTyping,
+    reconnect,
   };
 }
