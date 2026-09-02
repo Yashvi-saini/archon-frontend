@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import type { DetailedReport, ReportDifficulty, ReportsListResult, RubricCategory } from "../types";
 import { MOCK_REPORTS } from "../constants";
 
@@ -120,7 +120,10 @@ export async function fetchReportsList(params?: {
       },
       reports,
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      throw err;
+    }
     return {
       summary: {
         totalReports: MOCK_REPORTS.length,
@@ -146,7 +149,10 @@ export async function fetchReportDetail(sessionId: string): Promise<ReportDetail
 
     const report = normalizeReport(raw as RawDetailedReport);
     return { status: "done", report };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      throw err;
+    }
     const fallback = MOCK_REPORTS.find((r) => r.id === sessionId || r.sessionId === sessionId) || MOCK_REPORTS[0];
     return { status: "done", report: fallback };
   }

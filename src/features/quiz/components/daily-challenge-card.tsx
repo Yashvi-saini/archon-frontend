@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Sparkles, CheckCircle2, XCircle, HelpCircle, Loader2 } from "lucide-react";
 import type { QuizQuestion, VerifyDailyChallengeResponse } from "../types";
 import { useVerifyDailyChallenge } from "../hooks/use-quiz";
+import { toast } from "sonner";
 
 interface DailyChallengeCardProps {
   question: QuizQuestion;
@@ -29,13 +30,9 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
         selected_option_id: selectedOptId,
       });
       setVerificationResult(res);
-    } catch {
-      const localOpt = question.options.find((o) => o.id === selectedOptId);
-      setVerificationResult({
-        isCorrect: localOpt?.isCorrect ?? true,
-        correctOptionId: question.options.find((o) => o.isCorrect)?.id ?? selectedOptId,
-        explanation: localOpt?.explanation ?? "Option verified against distributed architectural principles.",
-      });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Failed to verify answer";
+      toast.error(errorMsg);
     }
   };
 

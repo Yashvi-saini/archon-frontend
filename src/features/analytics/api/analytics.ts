@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import type { OverallAnalytics, TimeRange } from "../types";
 import { MOCK_ANALYTICS } from "../constants";
 
@@ -71,7 +71,10 @@ export async function fetchAnalytics(range: TimeRange = "30d"): Promise<OverallA
           ? raw.pitfalls
           : MOCK_ANALYTICS.pitfalls,
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      throw err;
+    }
     return MOCK_ANALYTICS;
   }
 }

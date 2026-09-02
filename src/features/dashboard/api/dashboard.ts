@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import type { DashboardOverviewData } from "../types";
 import {
   MOCK_DASHBOARD_STATS,
@@ -144,7 +144,10 @@ export async function fetchDashboardOverview(): Promise<DashboardOverviewData> {
             }))
           : MOCK_ROADMAP,
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      throw err;
+    }
     return {
       stats: MOCK_DASHBOARD_STATS,
       recommendedScenario: MOCK_RECOMMENDED_SCENARIO,
