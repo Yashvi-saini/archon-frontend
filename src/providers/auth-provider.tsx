@@ -130,7 +130,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const handleUnauthorized = () => {
+      clearTokens();
+      setAccessToken(null);
+    };
+
+    window.addEventListener("archon:unauthorized", handleUnauthorized);
+
     initializeAuth();
+
+    return () => {
+      window.removeEventListener("archon:unauthorized", handleUnauthorized);
+    };
   }, []);
 
   useEffect(() => {
