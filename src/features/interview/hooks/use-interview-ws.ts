@@ -151,23 +151,22 @@ export function useInterviewWs(
         console.log("[WS Received]:", rawData);
 
         let extractedText: string | null = null;
+        let parsedPayload: Record<string, unknown> | null = null;
 
         try {
-          const parsed = JSON.parse(rawData);
+          const parsed = JSON.parse(rawData) as Record<string, unknown>;
 
           if (parsed && typeof parsed === "object") {
-            if (parsed.role === "user" || parsed.sender === "user") {
-              return;
-            }
-
+            parsedPayload = parsed;
             extractedText =
-              parsed.content ||
-              parsed.response ||
-              parsed.text ||
-              parsed.message ||
+              (parsed.content as string | undefined) ||
+              (parsed.response as string | undefined) ||
+              (parsed.text as string | undefined) ||
+              (parsed.message as string | undefined) ||
               (typeof parsed.data === "string"
                 ? parsed.data
-                : parsed.data?.content || parsed.data?.response) ||
+                : (parsed.data as Record<string, unknown> | undefined)?.content as string ||
+                  (parsed.data as Record<string, unknown> | undefined)?.response as string) ||
               null;
           }
         } catch {
@@ -179,16 +178,21 @@ export function useInterviewWs(
         if (extractedText) {
           cancelAiTyping();
 
-          const aiMsg: ChatMessage = {
-            id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            sender: "ai",
+          const role =
+            parsedPayload?.role === "user" || parsedPayload?.sender === "user"
+              ? "user"
+              : "ai";
+
+          const chatMsg: ChatMessage = {
+            id: `${role}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            sender: role,
             text: extractedText,
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             }),
           };
-          onMessageRef.current(aiMsg);
+          onMessageRef.current(chatMsg);
         }
       };
     };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Send,
@@ -16,67 +16,43 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { fetchUserSettings } from "@/features/settings/api/settings";
 import { WhiteboardCanvas } from "./canvas/whiteboard-canvas";
 import { useInterviewWs } from "../hooks/use-interview-ws";
+import { useInterviewDiagram } from "../hooks/use-interview-diagram";
 import { useSubmitInterview } from "../hooks/use-submit-interview";
+import {
+  buildElementSnapshotMap,
+  diagramToExcalidrawElements,
+  EDGE_SHAPE_TYPES,
+  getElementLabel,
+  inferEdgeProtocol,
+  NODE_SHAPE_TYPES,
+  shapeToNodeType,
+} from "../lib/diagram-utils";
 import type {
+  CanvasPreferences,
   ChatMessage,
   ExcalidrawElementSnapshot,
-  WsNodeData,
   WsEdgeData,
+  WsNodeData,
 } from "../types";
 
 interface WorkspaceLayoutProps {
   sessionId: string;
 }
 
-
-function shapeToNodeType(excalidrawType: string, label: string): string {
-  const l = label.toLowerCase();
-  if (l.includes("database") || l.includes("db") || l.includes("postgres") || l.includes("mysql") || l.includes("mongo")) return "database";
-  if (l.includes("cache") || l.includes("redis") || l.includes("memcache")) return "cache";
-  if (l.includes("queue") || l.includes("kafka") || l.includes("rabbit") || l.includes("sqs")) return "queue";
-  if (l.includes("load balancer") || l.includes("lb") || l.includes("nginx") || l.includes("gateway")) return "load_balancer";
-  if (l.includes("cdn")) return "cdn";
-  if (l.includes("client") || l.includes("user") || l.includes("browser") || l.includes("mobile")) return "client";
-  if (l.includes("storage") || l.includes("s3") || l.includes("blob")) return "storage";
-  // Fall back to shape type
-  if (excalidrawType === "ellipse") return "client";
-  if (excalidrawType === "diamond") return "gateway";
-  return "service";
-}
-
-function inferEdgeProtocol(label: string): string {
-  const l = label.toLowerCase();
-  if (l.includes("grpc")) return "grpc";
-  if (l.includes("tcp")) return "tcp";
-  if (l.includes("pubsub") || l.includes("pub/sub")) return "pubsub";
-  if (l.includes("ws") || l.includes("websocket")) return "ws";
-  return "http";
-}
-
-function getElementLabel(
-  el: ExcalidrawElementSnapshot,
-  allElements: readonly ExcalidrawElementSnapshot[]
-): string {
-
-  if (el.type === "text") return el.text ?? "";
-  const boundText = allElements.find(
-    (e) => !e.isDeleted && e.type === "text" && e.containerId === el.id
-  );
-  return boundText?.text ?? "";
-}
-
-const NODE_TYPES = new Set(["rectangle", "ellipse", "diamond"]);
-const EDGE_TYPES = new Set(["arrow", "line"]);
-
 export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const topicTitle = searchParams.get("title") ?? "System Design Interview";
+  const timeLimitMinutes = Number(searchParams.get("timeLimit") ?? "45");
+  const expectedTopics = useMemo(() => {
+    const raw = searchParams.get("topics");
+    return raw ? raw.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  }, [searchParams]);
 
-  // ── Timer ───────────────────────────────────────────────────────────────────
   const [seconds, setSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
 
@@ -94,7 +70,38 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
+  const timeLimitSecs = timeLimitMinutes * 60;
+  const isOvertime = seconds > timeLimitSecs;
+
   const [excalidrawAPI, setExcalidrawAPI] = useState<unknown>(null);
+  const [canvasPreferences, setCanvasPreferences] = useState<CanvasPreferences>({
+    gridType: "dots",
+    snapToGrid: true,
+    syncDebounceMs: 500,
+  });
+
+  useEffect(() => {
+    fetchUserSettings()
+      .then((settings) => {
+        setCanvasPreferences({
+          gridType: settings.canvasGridType,
+          snapToGrid: settings.snapToGrid,
+          syncDebounceMs: Math.max(settings.autoSaveIntervalSeconds * 1000, 300),
+        });
+      })
+      .catch(() => {
+        // keep defaults
+      });
+  }, []);
+
+  const { data: diagramData, isLoading: isDiagramLoading } = useInterviewDiagram(sessionId);
+
+  const restoredElements = useMemo(() => {
+    if (!diagramData?.nodes?.length) return undefined;
+    return diagramToExcalidrawElements(diagramData.nodes, diagramData.edges ?? []);
+  }, [diagramData]);
+
+  const diagramRestoredRef = useRef(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
@@ -105,9 +112,12 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-
   const addMessage = useCallback((msg: ChatMessage) => {
-    setMessages((prev) => [...prev, msg]);
+    setMessages((prev) => {
+      const isDuplicate = prev.some((m) => m.sender === msg.sender && m.text === msg.text);
+      if (isDuplicate) return prev;
+      return [...prev, msg];
+    });
   }, []);
 
   const {
@@ -146,53 +156,30 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     else if (wsStatus === "closed") toast.warning("AI connection closed", { id: "ws-status", duration: 3000 });
   }, [wsStatus]);
 
-  // If connected and no history returned from server, prompt candidate immediately
-  useEffect(() => {
-    if (wsStatus === "open" && messages.length === 0) {
-      const timer = setTimeout(() => {
-        setMessages((prev) => {
-          if (prev.length > 0) return prev;
-          return [
-            {
-              id: `ai-init-${Date.now()}`,
-              sender: "ai",
-              text: `Hello! Thanks for joining today - let's dive into designing ${topicTitle}. Could you clarify any specific requirements, concurrency, or any key features you'd like to focus on?`,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ];
-        });
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [wsStatus, messages.length, topicTitle]);
-
   const prevElementsRef = useRef<Map<string, ExcalidrawElementSnapshot>>(new Map());
   const pendingElementsRef = useRef<readonly ExcalidrawElementSnapshot[] | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextDiffRef = useRef(false);
 
-  const handleSceneChange = useCallback(
-    (elements: readonly ExcalidrawElementSnapshot[]) => {
-      if (wsStatus !== "open") {
-        const next = new Map<string, ExcalidrawElementSnapshot>();
-        for (const el of elements) next.set(el.id, el);
-        prevElementsRef.current = next;
-        return;
-      }
+  useEffect(() => {
+    if (!restoredElements?.length || diagramRestoredRef.current) return;
 
-      pendingElementsRef.current = elements;
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = setTimeout(() => {
-        const snapshot = pendingElementsRef.current;
-        if (!snapshot) return;
-        runDiff(snapshot);
-      }, 500); // 500ms after user stops moving
-    },
-    [wsStatus, sendNodeEvent, sendNodeDeleted, sendEdgeEvent, sendEdgeDeleted]
-  );
+    const api = excalidrawAPI as {
+      updateScene?: (scene: { elements: readonly unknown[] }) => void;
+      getSceneElements?: () => ExcalidrawElementSnapshot[];
+    } | null;
+
+    if (api?.updateScene) {
+      skipNextDiffRef.current = true;
+      api.updateScene({ elements: restoredElements });
+      const snapshot = api.getSceneElements?.() ?? (restoredElements as ExcalidrawElementSnapshot[]);
+      prevElementsRef.current = buildElementSnapshotMap(snapshot);
+      diagramRestoredRef.current = true;
+    }
+  }, [restoredElements, excalidrawAPI]);
 
   const runDiff = useCallback(
     (elements: readonly ExcalidrawElementSnapshot[]) => {
-
       const prev = prevElementsRef.current;
       const next = new Map<string, ExcalidrawElementSnapshot>();
 
@@ -206,7 +193,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
         if (el.type === "text") continue;
 
-        if (NODE_TYPES.has(el.type)) {
+        if (NODE_SHAPE_TYPES.has(el.type)) {
           if (el.isDeleted) {
             if (wasPresent && !prevEl!.isDeleted) {
               sendNodeDeleted(id);
@@ -234,7 +221,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           }
         }
 
-        if (EDGE_TYPES.has(el.type)) {
+        if (EDGE_SHAPE_TYPES.has(el.type)) {
           if (el.isDeleted) {
             if (wasPresent && !prevEl!.isDeleted) {
               sendEdgeDeleted(id);
@@ -242,7 +229,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           } else {
             const sourceId = el.startBinding?.elementId ?? "";
             const targetId = el.endBinding?.elementId ?? "";
-            // Only emit if both ends are connected to nodes
             if (!sourceId || !targetId) continue;
 
             const label = getElementLabel(el, elements);
@@ -256,7 +242,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             if (!wasPresent || prevEl!.isDeleted) {
               sendEdgeEvent("edge_added", edgePayload);
             } else {
-              // Check if connection changed
               const prevSrc = prevEl!.startBinding?.elementId ?? "";
               const prevTgt = prevEl!.endBinding?.elementId ?? "";
               if (prevSrc !== sourceId || prevTgt !== targetId) {
@@ -267,10 +252,33 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
         }
       }
 
-      // Update prev snapshot
       prevElementsRef.current = next;
     },
     [sendNodeEvent, sendNodeDeleted, sendEdgeEvent, sendEdgeDeleted]
+  );
+
+  const handleSceneChange = useCallback(
+    (elements: readonly ExcalidrawElementSnapshot[]) => {
+      if (skipNextDiffRef.current) {
+        skipNextDiffRef.current = false;
+        prevElementsRef.current = buildElementSnapshotMap(elements);
+        return;
+      }
+
+      if (wsStatus !== "open") {
+        prevElementsRef.current = buildElementSnapshotMap(elements);
+        return;
+      }
+
+      pendingElementsRef.current = elements;
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        const snapshot = pendingElementsRef.current;
+        if (!snapshot) return;
+        runDiff(snapshot);
+      }, canvasPreferences.syncDebounceMs);
+    },
+    [wsStatus, runDiff, canvasPreferences.syncDebounceMs]
   );
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -291,8 +299,8 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const handleGetAiFeedback = () => {
     const api = excalidrawAPI as { getSceneElements: () => ExcalidrawElementSnapshot[] } | null;
     const elements = api?.getSceneElements() ?? [];
-    const nodes = elements.filter((el) => !el.isDeleted && NODE_TYPES.has(el.type));
-    const edges = elements.filter((el) => !el.isDeleted && EDGE_TYPES.has(el.type));
+    const nodes = elements.filter((el) => !el.isDeleted && NODE_SHAPE_TYPES.has(el.type));
+    const edges = elements.filter((el) => !el.isDeleted && EDGE_SHAPE_TYPES.has(el.type));
 
     const nodeLabels = nodes
       .map((el) => getElementLabel(el, elements))
@@ -317,7 +325,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
   const submitInterviewMutation = useSubmitInterview();
 
-  //  Submit interview 
   const handleSubmitDesign = async () => {
     setIsTimerRunning(false);
     toast.loading("Submitting interview to AI...", { id: "submit-interview" });
@@ -331,7 +338,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
-  //WS status badge 
   const WsBadge = () => {
     if (wsStatus === "open")
       return (
@@ -354,12 +360,11 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-[#08090c] text-foreground select-none overflow-hidden">
-      {/* Header */}
       <header className="h-14 border-b border-zinc-200 dark:border-zinc-850 bg-white dark:bg-[#0a0c10] flex items-center justify-between px-6 flex-shrink-0 z-40">
         <div className="flex items-center gap-3.5">
           <button
             onClick={() => {
-              if (confirm("Exit the session? Progress will not be saved.")) {
+              if (confirm("Exit the session? Your whiteboard and chat are saved on the server.")) {
                 router.push("/interviews");
               }
             }}
@@ -374,21 +379,25 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
               {topicTitle}
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal hidden sm:block font-mono">
-              session: {sessionId.slice(0, 8)}…
+              session: {sessionId.slice(0, 8)}… · limit {timeLimitMinutes}m
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Timer */}
-          <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 font-sans">
-            <Clock className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400 flex-shrink-0" />
-            <span className="text-xs font-semibold font-mono text-zinc-700 dark:text-zinc-300 leading-none">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-sans ${
+              isOvertime
+                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+            }`}
+          >
+            <Clock className={`h-3.5 w-3.5 flex-shrink-0 ${isOvertime ? "text-rose-500" : "text-zinc-500 dark:text-zinc-400"}`} />
+            <span className={`text-xs font-semibold font-mono leading-none ${isOvertime ? "text-rose-600 dark:text-rose-400" : "text-zinc-700 dark:text-zinc-300"}`}>
               {formatTime(seconds)}
             </span>
           </div>
 
-          {/* Pause / Resume */}
           <button
             onClick={() => setIsTimerRunning((v) => !v)}
             className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
@@ -400,7 +409,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             )}
           </button>
 
-          {/* Request AI Feedback */}
           <button
             onClick={handleGetAiFeedback}
             disabled={wsStatus !== "open" || isAiTyping}
@@ -411,7 +419,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             <span className="hidden md:inline">Request Feedback</span>
           </button>
 
-          {/* End Interview */}
           <button
             onClick={handleSubmitDesign}
             disabled={submitInterviewMutation.isPending}
@@ -430,16 +437,36 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
         </div>
       </header>
 
-      {/* Main split */}
+      {expectedTopics.length > 0 && (
+        <div className="px-6 py-2 border-b border-zinc-200 dark:border-zinc-850 bg-zinc-50/80 dark:bg-zinc-900/20 flex flex-wrap gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mr-1 self-center">Expected topics</span>
+          {expectedTopics.map((topic) => (
+            <span
+              key={topic}
+              className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
+            >
+              {topic}
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden relative w-full">
+        {isDiagramLoading && (
+          <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-500">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Restoring whiteboard...
+          </div>
+        )}
+
         <WhiteboardCanvas
           setExcalidrawAPI={setExcalidrawAPI}
           onSceneChange={handleSceneChange}
+          initialElements={restoredElements}
+          canvasPreferences={canvasPreferences}
         />
 
-        {/* RIGHT: AI Chat Panel */}
         <div className="w-[380px] md:w-[420px] bg-white dark:bg-[#090a0e] border-l border-zinc-200 dark:border-zinc-850 flex flex-col h-full z-10 flex-shrink-0">
-          {/* Chat Header */}
           <div className="p-4 border-b border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/10 flex items-center justify-between font-sans">
             <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               System Interviewer
@@ -447,9 +474,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             <WsBadge />
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Empty state while WS is connecting */}
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12 px-4">
                 {wsStatus === "error" || wsStatus === "closed" ? (
@@ -479,7 +504,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                       <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
                     <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                      {wsStatus === "open" ? "Starting interview session..." : "Connecting to AI interviewer..."}
+                      {wsStatus === "open"
+                        ? "Waiting for AI interviewer greeting..."
+                        : "Connecting to AI interviewer..."}
                     </p>
                   </>
                 )}
@@ -507,7 +534,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
               </div>
             ))}
 
-            {/* AI Typing indicator */}
             {isAiTyping && (
               <div className="mr-auto items-start max-w-[90%] space-y-1">
                 <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-2">
@@ -537,7 +563,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <form
             onSubmit={handleSendMessage}
             className="p-4 border-t border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-[#090a0e] flex items-center gap-2"

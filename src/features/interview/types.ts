@@ -126,3 +126,31 @@ export interface ExcalidrawElementSnapshot {
   // For text bound to shapes
   containerId?: string | null;
 }
+
+export interface DiagramNode {
+  id: string;
+  interview_id?: string;
+  type: string;
+  label: string;
+  x: number;
+  y: number;
+}
+
+export interface DiagramEdge {
+  id: string;
+  interview_id?: string;
+  source: string;
+  target: string;
+  type: string;
+}
+
+export interface DiagramResponse {
+  nodes: DiagramNode[];
+  edges: DiagramEdge[];
+}
+
+export interface CanvasPreferences {
+  gridType: "dots" | "grid" | "blank";
+  snapToGrid: boolean;
+  syncDebounceMs: number;
+}

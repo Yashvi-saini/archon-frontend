@@ -1,25 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Network, ArrowRight, MessageSquare, Car, Video, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStartInterview } from "@/features/interview/hooks/use-start-interview";
-import type { CreateInterviewRequest } from "@/features/interview/types";
+import { fetchInterviewQuestions } from "@/features/interview/api/interview";
+import type { CreateInterviewRequest, Question } from "@/features/interview/types";
 
 type DifficultyKey = "easy" | "medium" | "hard";
 
-interface Topic {
+interface TopicCard {
   id: string;
+  questionId?: string;
   title: string;
   desc: string;
   icon: React.ElementType;
   difficulty: DifficultyKey;
   estTime: string;
   color: string;
+  expectedTopics?: string[];
 }
 
-const topics: Topic[] = [
+const FALLBACK_TOPICS: TopicCard[] = [
   {
     id: "whatsapp",
     title: "WhatsApp System Design",
@@ -70,6 +74,49 @@ const difficultyBadge: Record<DifficultyKey, string> = {
   hard: "text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800",
 };
 
+function normalizeDifficulty(raw: string): DifficultyKey {
+  const d = raw.toLowerCase();
+  if (d.includes("beginner") || d === "easy") return "easy";
+  if (d.includes("intermediate") || d === "medium") return "medium";
+  return "hard";
+}
+
+function questionToTopicCard(q: Question, index: number): TopicCard {
+  const icons = [MessageSquare, Car, Video, Network];
+  const colors = [
+    "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+    "text-sky-500 bg-sky-500/10 border-sky-500/20",
+    "text-rose-500 bg-rose-500/10 border-rose-500/20",
+    "text-violet-500 bg-violet-500/10 border-violet-500/20",
+  ];
+  const difficulty = normalizeDifficulty(q.difficulty);
+
+  return {
+    id: q.id,
+    questionId: q.id,
+    title: q.title,
+    desc: q.expected_topics?.length
+      ? `Focus areas: ${q.expected_topics.slice(0, 4).join(", ")}`
+      : "System design interview scenario from the Archon question bank.",
+    icon: icons[index % icons.length],
+    difficulty,
+    estTime: `${q.time_limit_minutes} mins`,
+    color: colors[index % colors.length],
+    expectedTopics: q.expected_topics,
+  };
+}
+
+function buildInterviewUrl(sessionId: string, question: Question): string {
+  const params = new URLSearchParams({
+    title: question.title,
+    timeLimit: String(question.time_limit_minutes),
+  });
+  if (question.expected_topics?.length) {
+    params.set("topics", question.expected_topics.join(","));
+  }
+  return `/interview/${sessionId}?${params.toString()}`;
+}
+
 export default function InterviewsPage() {
   const router = useRouter();
   const [customTopic, setCustomTopic] = useState("");
@@ -77,16 +124,29 @@ export default function InterviewsPage() {
 
   const { mutateAsync: startInterview } = useStartInterview();
 
-  const handleStartPractice = async (topic: Topic) => {
+  const { data: backendQuestions, isLoading: isLoadingQuestions } = useQuery({
+    queryKey: ["interview-questions"],
+    queryFn: fetchInterviewQuestions,
+    staleTime: 60_000,
+  });
+
+  const topics = useMemo<TopicCard[]>(() => {
+    if (backendQuestions?.length) {
+      return backendQuestions.map(questionToTopicCard);
+    }
+    return FALLBACK_TOPICS;
+  }, [backendQuestions]);
+
+  const handleStartPractice = async (topic: TopicCard) => {
     setStartingId(topic.id);
     try {
-      const payload: CreateInterviewRequest = { difficulty: topic.difficulty };
+      const payload: CreateInterviewRequest = {
+        difficulty: topic.difficulty,
+        ...(topic.questionId ? { question_id: topic.questionId } : {}),
+      };
       const result = await startInterview(payload);
-      toast.success(`Interview session started!`);
-      // Navigate to workspace with session_id and topic metadata in query params
-      router.push(
-        `/interview/${result.session_id}?topic=${encodeURIComponent(topic.id)}&title=${encodeURIComponent(topic.title)}`
-      );
+      toast.success("Interview session started!");
+      router.push(buildInterviewUrl(result.session_id, result.question));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to start interview. Please try again.";
       toast.error(message);
@@ -106,9 +166,11 @@ export default function InterviewsPage() {
       const payload: CreateInterviewRequest = { difficulty: "medium" };
       const result = await startInterview(payload);
       toast.success("Custom interview session started!");
-      router.push(
-        `/interview/${result.session_id}?topic=custom&title=${encodeURIComponent(customTopic)}`
-      );
+      const question = {
+        ...result.question,
+        title: customTopic.trim(),
+      };
+      router.push(buildInterviewUrl(result.session_id, question));
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to start interview. Please try again.";
       toast.error(message);
@@ -119,15 +181,18 @@ export default function InterviewsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-8 animate-in fade-in duration-205">
-      {/* Page Header */}
       <div>
         <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">Interviews</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
           Select a distributed systems problem to enter the interactive design whiteboard workspace.
+          {isLoadingQuestions && (
+            <span className="ml-2 inline-flex items-center gap-1 text-zinc-400">
+              <Loader2 className="h-3 w-3 animate-spin" /> Loading questions...
+            </span>
+          )}
         </p>
       </div>
 
-      {/* Grid of system design topics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {topics.map((topic) => {
           const Icon = topic.icon;
@@ -138,7 +203,6 @@ export default function InterviewsPage() {
               className="flex flex-col justify-between p-6 bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-primary/55 group transition-all"
             >
               <div className="space-y-4">
-                {/* Topic icon and metadata badges */}
                 <div className="flex items-center justify-between">
                   <div className={`p-2 rounded-lg border ${topic.color}`}>
                     <Icon className="h-5 w-5" />
@@ -155,7 +219,6 @@ export default function InterviewsPage() {
                   </div>
                 </div>
 
-                {/* Title and Description */}
                 <div>
                   <h3 className="font-bold text-zinc-950 dark:text-zinc-50 group-hover:text-primary transition-colors">
                     {topic.title}
@@ -166,7 +229,6 @@ export default function InterviewsPage() {
                 </div>
               </div>
 
-              {/* Action Button */}
               <button
                 onClick={() => handleStartPractice(topic)}
                 disabled={!!startingId}
@@ -188,7 +250,6 @@ export default function InterviewsPage() {
         })}
       </div>
 
-      {/* Custom Problem section */}
       <div className="p-6 bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-xl max-w-2xl space-y-4">
         <div>
           <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400">Custom Scenario</h2>

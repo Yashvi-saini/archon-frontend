@@ -5,6 +5,7 @@ import type {
   InterviewReportResult,
   Question,
   UserInterviewSummary,
+  DiagramResponse,
 } from "../types";
 
 export async function startInterview(
@@ -29,6 +30,10 @@ export async function fetchInterviewQuestions(): Promise<Question[]> {
 
 export async function fetchUserInterviews(): Promise<UserInterviewSummary[]> {
   return apiClient.get<UserInterviewSummary[]>("/api/v1/interviews");
+}
+
+export async function fetchInterviewDiagram(sessionId: string): Promise<DiagramResponse> {
+  return apiClient.get<DiagramResponse>(`/api/v1/interviews/${sessionId}/diagram`);
 }
 
 export function buildChatWsUrl(sessionId: string): string {

@@ -1,11 +1,19 @@
 export { InterviewWorkspace } from "./components/workspace-layout";
 
-export { startInterview, submitInterview, getInterviewReport, buildChatWsUrl } from "./api/interview";
+export {
+  startInterview,
+  submitInterview,
+  getInterviewReport,
+  fetchInterviewDiagram,
+  fetchInterviewQuestions,
+  buildChatWsUrl,
+} from "./api/interview";
 
 export { useStartInterview } from "./hooks/use-start-interview";
 export { useSubmitInterview } from "./hooks/use-submit-interview";
 export { useInterviewReport } from "./hooks/use-interview-report";
 export { useInterviewWs } from "./hooks/use-interview-ws";
+export { useInterviewDiagram } from "./hooks/use-interview-diagram";
 
 export type {
   Question,
@@ -23,4 +31,8 @@ export type {
   WsEdgeData,
   WsEdgeDeletedData,
   WsIncomingMessage,
+  DiagramNode,
+  DiagramEdge,
+  DiagramResponse,
+  CanvasPreferences,
 } from "./types";
