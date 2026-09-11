@@ -80,10 +80,10 @@ export function SettingsView() {
 
   if (isServerError) {
     return (
-      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+      <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         <div>
-          <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">Workspace Settings</h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">Workspace Settings</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5">
             Customize target level calibrations, AI interviewer rigor, and whiteboarding preferences.
           </p>
         </div>
@@ -107,23 +107,23 @@ export function SettingsView() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
               Workspace Settings
             </h1>
             {isServerLoading && (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
             )}
           </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
             Customize target level calibrations, AI interviewer rigor, and whiteboarding preferences.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {hasChanges && (
             <button
               onClick={handleReset}

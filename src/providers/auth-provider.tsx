@@ -9,7 +9,27 @@ import { refreshAccessToken } from "@/features/auth";
 const TOKEN_KEYS = {
   access: "archon_access_token",
   refresh: "archon_refresh_token",
+  email: "archon_user_email",
 } as const;
+
+export function parseEmailFromToken(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    const parsed = JSON.parse(jsonPayload);
+    return parsed.email || null;
+  } catch {
+    return null;
+  }
+}
 
 function getStoredToken(key: string): string | null {
   if (typeof window === "undefined") return null;
@@ -19,11 +39,16 @@ function getStoredToken(key: string): string | null {
 function storeTokens(accessToken: string, refreshToken: string) {
   localStorage.setItem(TOKEN_KEYS.access, accessToken);
   localStorage.setItem(TOKEN_KEYS.refresh, refreshToken);
+  const email = parseEmailFromToken(accessToken);
+  if (email) {
+    localStorage.setItem(TOKEN_KEYS.email, email);
+  }
 }
 
 function clearTokens() {
   localStorage.removeItem(TOKEN_KEYS.access);
   localStorage.removeItem(TOKEN_KEYS.refresh);
+  localStorage.removeItem(TOKEN_KEYS.email);
 }
 
 //context
@@ -31,6 +56,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   accessToken: string | null;
+  userEmail: string | null;
   login: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
@@ -39,6 +65,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   accessToken: null,
+  userEmail: null,
   login: () => {},
   logout: () => {},
 });
@@ -172,9 +199,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   const isAuthenticated = !!accessToken;
+  const userEmail = parseEmailFromToken(accessToken) || (typeof window !== "undefined" ? getStoredToken(TOKEN_KEYS.email) : null);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, accessToken, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, accessToken, userEmail, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

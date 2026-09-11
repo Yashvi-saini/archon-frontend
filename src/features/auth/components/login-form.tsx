@@ -86,6 +86,10 @@ export function LoginForm() {
     setIsLoading(false);
 
     if (response.success) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("archon_user_email", email);
+      }
+
       // Extract tokens from response — backend may return them at top level or inside data
       const accessToken = response.access_token || response.data?.access_token;
       const refreshToken = response.refresh_token || response.data?.refresh_token;

@@ -25,18 +25,18 @@ export function QuizHub() {
       : 0;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
               System Design Quiz Trainer
             </h1>
             {(isDailyLoading || isDecksLoading) && (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
             )}
           </div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
             Rapid-fire concept verification across distributed algorithms, consistency models, and network paradigms.
           </p>
         </div>
@@ -44,16 +44,16 @@ export function QuizHub() {
         <div className="flex items-center gap-3">
           {totalMastery > 0 && (
             <>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 text-xs shadow-xs">
-                <Flame className="h-4 w-4 text-amber-500" />
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 text-sm shadow-xs">
+                <Flame className="h-4.5 w-4.5 text-amber-500" />
                 <span className="font-bold text-zinc-900 dark:text-zinc-100">{decks.length} Decks</span>
-                <span className="text-zinc-400 text-[11px]">Available</span>
+                <span className="text-zinc-400 text-xs">Available</span>
               </div>
 
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 text-xs shadow-xs">
-                <Award className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 text-sm shadow-xs">
+                <Award className="h-4.5 w-4.5 text-primary" />
                 <span className="font-bold text-zinc-900 dark:text-zinc-100">{totalMastery}%</span>
-                <span className="text-zinc-400 text-[11px]">Mastery</span>
+                <span className="text-zinc-400 text-xs">Mastery</span>
               </div>
             </>
           )}

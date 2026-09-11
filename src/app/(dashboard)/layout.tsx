@@ -54,7 +54,7 @@ export default function DashboardLayout({
 
       {/* Main Content Pane - transition margins smoothly when sidebar collapses */}
       <div className={`flex flex-1 flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ${
-        isCollapsed ? "lg:pl-[70px]" : "lg:pl-[260px]"
+        isCollapsed ? "lg:pl-[76px]" : "lg:pl-[275px]"
       }`}>
         {/* Shared Navbar */}
         <Navbar onMenuClick={() => setMobileMenuOpen(true)} />

@@ -14,36 +14,36 @@ export function DashboardOverview() {
   const { data, isLoading, isError, refetch } = useDashboardOverview();
 
   const header = (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
       <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
             Architecture Dashboard
           </h1>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+          <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80">
             Active Candidate
           </span>
           {isLoading && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
           )}
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
           System design interview readiness, practice metrics, and AI evaluations.
         </p>
       </div>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
         <Link
           href="/quiz"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111318] text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors shadow-2xs"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111318] text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all shadow-xs hover:shadow-sm"
         >
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> Quick Quiz
+          <Sparkles className="h-4 w-4 text-primary" /> Quick Quiz
         </Link>
         <Link
           href="/interviews"
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-xs font-bold text-white dark:text-zinc-900 transition-colors shadow-xs"
+          className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-sm font-bold text-white dark:text-zinc-900 transition-all shadow-xs hover:shadow-sm"
         >
-          <Plus className="h-3.5 w-3.5" /> Start Interview
+          <Plus className="h-4 w-4" /> Start Interview
         </Link>
       </div>
     </div>
@@ -51,30 +51,30 @@ export function DashboardOverview() {
 
   if (isLoading) {
     return (
-      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+      <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         {header}
         {/* Stats skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className="p-5 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs space-y-3 animate-pulse"
+              className="p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl shadow-xs space-y-3.5 animate-pulse"
             >
               <div className="flex items-center justify-between">
-                <div className="h-3 w-28 bg-zinc-100 dark:bg-zinc-800 rounded" />
-                <div className="h-7 w-7 bg-zinc-100 dark:bg-zinc-800 rounded-lg" />
+                <div className="h-3.5 w-28 bg-zinc-100 dark:bg-zinc-800 rounded" />
+                <div className="h-8 w-8 bg-zinc-100 dark:bg-zinc-800 rounded-xl" />
               </div>
-              <div className="h-8 w-20 bg-zinc-100 dark:bg-zinc-800 rounded" />
-              <div className="h-3 w-36 bg-zinc-100 dark:bg-zinc-800 rounded" />
+              <div className="h-9 w-24 bg-zinc-100 dark:bg-zinc-800 rounded" />
+              <div className="h-3.5 w-36 bg-zinc-100 dark:bg-zinc-800 rounded" />
             </div>
           ))}
         </div>
         {/* Hero skeleton */}
-        <div className="h-44 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
+        <div className="h-48 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
         {/* Bottom grid skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-72 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
-          <div className="h-72 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
+          <div className="h-80 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
+          <div className="h-80 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
         </div>
       </div>
     );
@@ -82,7 +82,7 @@ export function DashboardOverview() {
 
   if (isError) {
     return (
-      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+      <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         {header}
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-full">
@@ -119,7 +119,7 @@ export function DashboardOverview() {
     recentInterviews.length === 0;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
       {header}
 
       <StatsSummaryCards stats={stats} />

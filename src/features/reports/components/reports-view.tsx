@@ -63,14 +63,14 @@ export function ReportsView() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
       {!selectedReport && (
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
               Interview Reports &amp; Audits
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
               Detailed scoring breakdowns, architectural trade-off evaluations, and AI feedback history.
             </p>
           </div>

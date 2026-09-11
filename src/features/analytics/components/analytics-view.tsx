@@ -15,28 +15,28 @@ export function AnalyticsView() {
   const { data, isLoading, isError, refetch } = useAnalytics(timeRange);
 
   const header = (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
       <div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
             System Design Analytics &amp; Telemetry
           </h1>
           {isLoading && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
           )}
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
           Quantified architectural benchmarks, radar skills, and practice metrics.
         </p>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center p-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs">
+        <div className="flex items-center p-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs">
           {(["7d", "30d", "90d", "all"] as TimeRange[]).map((range) => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer ${
                 timeRange === range
                   ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs"
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
@@ -52,11 +52,11 @@ export function AnalyticsView() {
 
   if (isLoading) {
     return (
-      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+      <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         {header}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-5 h-72 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
-          <div className="lg:col-span-7 h-72 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
+          <div className="lg:col-span-5 h-80 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
+          <div className="lg:col-span-7 h-80 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
         </div>
         <div className="h-64 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
         <div className="h-48 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
@@ -66,7 +66,7 @@ export function AnalyticsView() {
 
   if (isError) {
     return (
-      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+      <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         {header}
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-full">
@@ -92,7 +92,7 @@ export function AnalyticsView() {
 
   if (!hasData) {
     return (
-      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+      <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         {header}
         <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
           <div className="p-4 bg-zinc-100 dark:bg-zinc-800/50 rounded-full">
@@ -110,7 +110,7 @@ export function AnalyticsView() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
       {header}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
