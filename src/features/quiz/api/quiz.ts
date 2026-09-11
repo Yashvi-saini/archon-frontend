@@ -6,13 +6,11 @@ import type {
   SubmitDeckQuizResponse,
   QuizDifficulty,
 } from "../types";
-import { DAILY_CHALLENGE_QUESTION, MOCK_QUIZ_DECKS } from "../constants";
 
 interface RawQuizOption {
   id: string;
   text: string;
   is_correct?: boolean;
-  isCorrect?: boolean;
   explanation?: string;
 }
 
@@ -21,7 +19,6 @@ interface RawQuizQuestion {
   question: string;
   scenario?: string;
   topic_tag?: string;
-  topicTag?: string;
   options: RawQuizOption[];
 }
 
@@ -31,14 +28,10 @@ interface RawQuizDeckItem {
   description: string;
   difficulty: string;
   question_count?: number;
-  questionCount?: number;
   est_minutes?: number;
-  estMinutes?: number;
   icon_name?: string;
-  iconName?: string;
   category: string;
   completed_percent?: number;
-  completedPercent?: number;
 }
 
 function normalizeQuestion(raw: RawQuizQuestion): QuizQuestion {
@@ -46,11 +39,11 @@ function normalizeQuestion(raw: RawQuizQuestion): QuizQuestion {
     id: raw.id,
     question: raw.question,
     scenario: raw.scenario,
-    topicTag: raw.topic_tag ?? raw.topicTag ?? "Distributed Systems",
+    topicTag: raw.topic_tag ?? "Distributed Systems",
     options: raw.options.map((opt) => ({
       id: opt.id,
       text: opt.text,
-      isCorrect: opt.is_correct ?? opt.isCorrect,
+      isCorrect: opt.is_correct,
       explanation: opt.explanation,
     })),
   };
@@ -58,9 +51,6 @@ function normalizeQuestion(raw: RawQuizQuestion): QuizQuestion {
 
 export async function fetchDailyChallenge(): Promise<QuizQuestion> {
   const raw = await apiClient.get<RawQuizQuestion>("/api/v1/quizzes/daily-challenge");
-  if (!raw || !raw.id) {
-    return DAILY_CHALLENGE_QUESTION;
-  }
   return normalizeQuestion(raw);
 }
 
@@ -70,15 +60,13 @@ export async function verifyDailyChallenge(payload: {
 }): Promise<VerifyDailyChallengeResponse> {
   const raw = await apiClient.post<{
     is_correct?: boolean;
-    isCorrect?: boolean;
     correct_option_id?: string;
-    correctOptionId?: string;
     explanation?: string;
   }>("/api/v1/quizzes/daily-challenge/verify", payload);
 
   return {
-    isCorrect: raw.is_correct ?? raw.isCorrect ?? false,
-    correctOptionId: raw.correct_option_id ?? raw.correctOptionId ?? "",
+    isCorrect: raw.is_correct ?? false,
+    correctOptionId: raw.correct_option_id ?? "",
     explanation: raw.explanation ?? "",
   };
 }
@@ -86,32 +74,26 @@ export async function verifyDailyChallenge(payload: {
 export async function fetchQuizDecks(): Promise<QuizDeck[]> {
   const raw = await apiClient.get<RawQuizDeckItem[]>("/api/v1/quizzes/decks");
   if (!raw || !Array.isArray(raw) || raw.length === 0) {
-    return MOCK_QUIZ_DECKS;
+    return [];
   }
 
-  return raw.map((item) => {
-    const localDeck = MOCK_QUIZ_DECKS.find((d) => d.id === item.id);
-    return {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      difficulty: (item.difficulty?.toLowerCase() ?? "intermediate") as QuizDifficulty,
-      questionCount: item.question_count ?? item.questionCount ?? (localDeck?.questions.length ?? 3),
-      estMinutes: item.est_minutes ?? item.estMinutes ?? 8,
-      iconName: item.icon_name ?? item.iconName ?? "Layers",
-      category: item.category,
-      completedPercent: item.completed_percent ?? item.completedPercent ?? 0,
-      questions: localDeck?.questions ?? [],
-    };
-  });
+  return raw.map((item) => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    difficulty: (item.difficulty?.toLowerCase() ?? "intermediate") as QuizDifficulty,
+    questionCount: item.question_count ?? 0,
+    estMinutes: item.est_minutes ?? 10,
+    iconName: item.icon_name ?? "Layers",
+    category: item.category,
+    completedPercent: item.completed_percent ?? 0,
+    questions: [],
+  }));
 }
 
 export async function fetchQuizDeckQuestions(deckId: string): Promise<QuizQuestion[]> {
   const raw = await apiClient.get<RawQuizQuestion[]>(`/api/v1/quizzes/decks/${deckId}`);
-  if (!raw || !Array.isArray(raw) || raw.length === 0) {
-    const fallback = MOCK_QUIZ_DECKS.find((d) => d.id === deckId);
-    return fallback?.questions ?? [];
-  }
+  if (!raw || !Array.isArray(raw)) return [];
   return raw.map(normalizeQuestion);
 }
 
@@ -124,37 +106,29 @@ export async function submitQuizDeck(
 ): Promise<SubmitDeckQuizResponse> {
   const raw = await apiClient.post<{
     deck_id?: string;
-    deckId?: string;
     total_questions?: number;
-    totalQuestions?: number;
     correct_count?: number;
-    correctCount?: number;
     score_percent?: number;
-    scorePercent?: number;
     review?: Array<{
       question_id?: string;
-      questionId?: string;
       user_option_id?: string;
-      userOptionId?: string;
       correct_option_id?: string;
-      correctOptionId?: string;
       is_correct?: boolean;
-      isCorrect?: boolean;
       explanation?: string;
     }>;
   }>(`/api/v1/quizzes/decks/${deckId}/submit`, payload);
 
   return {
-    deckId: raw.deck_id ?? raw.deckId ?? deckId,
-    totalQuestions: raw.total_questions ?? raw.totalQuestions ?? Object.keys(payload.answers).length,
-    correctCount: raw.correct_count ?? raw.correctCount ?? 0,
-    scorePercent: raw.score_percent ?? raw.scorePercent ?? 0,
+    deckId: raw.deck_id ?? deckId,
+    totalQuestions: raw.total_questions ?? Object.keys(payload.answers).length,
+    correctCount: raw.correct_count ?? 0,
+    scorePercent: raw.score_percent ?? 0,
     review:
       raw.review?.map((rev) => ({
-        questionId: rev.question_id ?? rev.questionId ?? "",
-        userOptionId: rev.user_option_id ?? rev.userOptionId ?? "",
-        correctOptionId: rev.correct_option_id ?? rev.correctOptionId ?? "",
-        isCorrect: rev.is_correct ?? rev.isCorrect ?? false,
+        questionId: rev.question_id ?? "",
+        userOptionId: rev.user_option_id ?? "",
+        correctOptionId: rev.correct_option_id ?? "",
+        isCorrect: rev.is_correct ?? false,
         explanation: rev.explanation ?? "",
       })) ?? [],
   };

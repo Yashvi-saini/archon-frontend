@@ -1,5 +1,4 @@
 export * from "./types";
-export * from "./constants";
 export * from "./components/stats-summary-cards";
 export * from "./components/recommended-scenario-hero";
 export * from "./components/competency-radar";

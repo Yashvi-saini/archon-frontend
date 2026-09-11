@@ -6,32 +6,40 @@ import { ProfileRoleTab } from "./profile-role-tab";
 import { InterviewerAiTab } from "./interviewer-ai-tab";
 import { WorkspaceCanvasTab } from "./workspace-canvas-tab";
 import { PreferencesTab } from "./preferences-tab";
-import { DEFAULT_USER_SETTINGS } from "../constants";
 import type { UserSettings } from "../types";
-import { Check, User, Bot, Layout, BellRing, Loader2 } from "lucide-react";
+import { Check, User, Bot, Layout, BellRing, Loader2, RefreshCw } from "lucide-react";
 import { useUserSettings, useUpdateUserSettings } from "../hooks/use-settings";
 
 type SettingsTabKey = "profile" | "ai" | "canvas" | "preferences";
 
+// Structural zero-value defaults — used only while API is loading, never shown as fake data
+const EMPTY_SETTINGS: UserSettings = {
+  fullName: "",
+  email: "",
+  targetLevel: "senior",
+  yearsOfExperience: 0,
+  primaryStack: "",
+  targetCompanies: [],
+  interviewerStrictness: "standard",
+  feedbackStyle: "socratic",
+  enableProactiveHints: true,
+  enableVoiceInterview: false,
+  canvasGridType: "dots",
+  snapToGrid: true,
+  autoSaveIntervalSeconds: 15,
+  exportFormat: "svg",
+  weeklyInterviewTarget: 3,
+  emailNotifications: true,
+  weeklyReportDigest: true,
+};
+
 export function SettingsView() {
   const [activeTab, setActiveTab] = useState<SettingsTabKey>("profile");
 
-  const { data: serverSettings, isLoading: isServerLoading } = useUserSettings();
+  const { data: serverSettings, isLoading: isServerLoading, isError: isServerError, refetch } = useUserSettings();
   const updateMutation = useUpdateUserSettings();
 
-  const [settings, setSettings] = useState<UserSettings>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("archon_user_settings");
-        if (saved) {
-          return { ...DEFAULT_USER_SETTINGS, ...JSON.parse(saved) };
-        }
-      } catch {
-        // ignore
-      }
-    }
-    return DEFAULT_USER_SETTINGS;
-  });
+  const [settings, setSettings] = useState<UserSettings>(EMPTY_SETTINGS);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
@@ -51,20 +59,16 @@ export function SettingsView() {
       setHasChanges(false);
       toast.success("Workspace preferences saved successfully");
     } catch {
-      try {
-        localStorage.setItem("archon_user_settings", JSON.stringify(settings));
-        setHasChanges(false);
-        toast.info("Saved to local workspace cache");
-      } catch {
-        toast.error("Failed to save settings");
-      }
+      toast.error("Failed to save settings. Please try again.");
     }
   };
 
   const handleReset = () => {
-    setSettings(serverSettings ?? DEFAULT_USER_SETTINGS);
-    setHasChanges(true);
-    toast.info("Reset to default preferences");
+    if (serverSettings) {
+      setSettings(serverSettings);
+      setHasChanges(false);
+      toast.info("Reset to last saved preferences");
+    }
   };
 
   const tabs: { key: SettingsTabKey; label: string; icon: React.ElementType }[] = [
@@ -73,6 +77,34 @@ export function SettingsView() {
     { key: "canvas", label: "Whiteboard & Canvas", icon: Layout },
     { key: "preferences", label: "Goals & Notifications", icon: BellRing },
   ];
+
+  if (isServerError) {
+    return (
+      <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
+        <div>
+          <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">Workspace Settings</h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Customize target level calibrations, AI interviewer rigor, and whiteboarding preferences.
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+          <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-full">
+            <RefreshCw className="h-6 w-6 text-rose-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Failed to load settings</h3>
+            <p className="text-xs text-zinc-500 mt-1">Could not reach the settings endpoint. Please try again.</p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-bold cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 space-y-6 animate-in fade-in duration-200">
@@ -95,14 +127,15 @@ export function SettingsView() {
           {hasChanges && (
             <button
               onClick={handleReset}
-              className="px-3 py-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+              disabled={!serverSettings}
+              className="px-3 py-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors cursor-pointer disabled:opacity-40"
             >
               Reset
             </button>
           )}
           <button
             onClick={handleSave}
-            disabled={updateMutation.isPending}
+            disabled={updateMutation.isPending || isServerLoading}
             className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-xs disabled:opacity-50"
           >
             {updateMutation.isPending ? (
@@ -138,17 +171,30 @@ export function SettingsView() {
         </div>
 
         <div className="flex-1 p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs">
-          {activeTab === "profile" && (
-            <ProfileRoleTab settings={settings} onChange={handleChange} />
-          )}
-          {activeTab === "ai" && (
-            <InterviewerAiTab settings={settings} onChange={handleChange} />
-          )}
-          {activeTab === "canvas" && (
-            <WorkspaceCanvasTab settings={settings} onChange={handleChange} />
-          )}
-          {activeTab === "preferences" && (
-            <PreferencesTab settings={settings} onChange={handleChange} />
+          {isServerLoading ? (
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 w-24 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse" />
+                  <div className="h-9 w-full bg-zinc-100 dark:bg-zinc-800 rounded-lg animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {activeTab === "profile" && (
+                <ProfileRoleTab settings={settings} onChange={handleChange} />
+              )}
+              {activeTab === "ai" && (
+                <InterviewerAiTab settings={settings} onChange={handleChange} />
+              )}
+              {activeTab === "canvas" && (
+                <WorkspaceCanvasTab settings={settings} onChange={handleChange} />
+              )}
+              {activeTab === "preferences" && (
+                <PreferencesTab settings={settings} onChange={handleChange} />
+              )}
+            </>
           )}
         </div>
       </div>

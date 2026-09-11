@@ -45,7 +45,7 @@ export interface RoadmapTopic {
 
 export interface DashboardOverviewData {
   stats: DashboardStats;
-  recommendedScenario: RecommendedScenario;
+  recommendedScenario: RecommendedScenario | null;
   competencies: CompetencyMetric[];
   recentInterviews: RecentInterviewItem[];
   roadmap: RoadmapTopic[];

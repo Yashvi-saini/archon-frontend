@@ -1,28 +1,4 @@
-import type { UserSettings } from "./types";
-
-export const DEFAULT_USER_SETTINGS: UserSettings = {
-  fullName: "Senior Candidate",
-  email: "candidate@archon.dev",
-  targetLevel: "senior",
-  yearsOfExperience: 5,
-  primaryStack: "Go",
-  targetCompanies: ["Google", "Meta", "Stripe", "Uber"],
-
-  interviewerStrictness: "standard",
-  feedbackStyle: "socratic",
-  enableProactiveHints: true,
-  enableVoiceInterview: false,
-
-  canvasGridType: "dots",
-  snapToGrid: true,
-  autoSaveIntervalSeconds: 15,
-  exportFormat: "svg",
-
-  weeklyInterviewTarget: 3,
-  emailNotifications: true,
-  weeklyReportDigest: true,
-};
-
+// UI select options — these are real config values, not mock data
 export const TARGET_COMPANIES_LIST = [
   "Google",
   "Meta",
