@@ -22,6 +22,7 @@ export interface UseInterviewWsReturn {
   sendEdgeEvent: (type: "edge_added" | "edge_updated", data: WsEdgeData) => void;
   sendEdgeDeleted: (id: string) => void;
   isAiTyping: boolean;
+  streamingAiText: string;
   cancelAiTyping: () => void;
   reconnect: () => void;
 }
@@ -33,6 +34,7 @@ export function useInterviewWs(
   const wsRef = useRef<WebSocket | null>(null);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [streamingAiText, setStreamingAiText] = useState("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onMessageRef = useRef(onMessage);
@@ -46,6 +48,7 @@ export function useInterviewWs(
       typingTimeoutRef.current = null;
     }
     setIsAiTyping(false);
+    setStreamingAiText("");
   }, []);
 
   const connectRef = useRef<() => void>(() => {});
@@ -62,7 +65,7 @@ export function useInterviewWs(
       if (!refreshToken) return;
 
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8071";
         const res = await fetch(`${apiBaseUrl}/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -179,27 +182,28 @@ export function useInterviewWs(
 
             if (msgType === "chunk") {
               const dataObj = parsed.data as Record<string, unknown> | undefined;
-              if (dataObj?.delta) {
-                extractedText = String(dataObj.delta);
+              const delta = dataObj?.delta || parsed.delta;
+              if (delta) {
+                setIsAiTyping(true);
+                setStreamingAiText((prev) => prev + String(delta));
               }
+              return;
             }
 
-            if (!extractedText) {
-              const dataObj = parsed.data as Record<string, unknown> | undefined;
-              extractedText =
-                (parsed.content as string | undefined) ||
-                (parsed.response as string | undefined) ||
-                (parsed.text as string | undefined) ||
-                (parsed.message as string | undefined) ||
-                (typeof parsed.data === "string"
-                  ? parsed.data
-                  : (dataObj?.content as string | undefined) ||
-                    (dataObj?.response as string | undefined) ||
-                    (dataObj?.message as string | undefined)) ||
-                null;
-            }
+            const dataObj = parsed.data as Record<string, unknown> | undefined;
+            extractedText =
+              (parsed.content as string | undefined) ||
+              (parsed.response as string | undefined) ||
+              (parsed.text as string | undefined) ||
+              (parsed.message as string | undefined) ||
+              (typeof parsed.data === "string"
+                ? parsed.data
+                : (dataObj?.content as string | undefined) ||
+                  (dataObj?.response as string | undefined) ||
+                  (dataObj?.message as string | undefined)) ||
+              null;
 
-            if (parsed.role === "user" || parsed.sender === "user") {
+            if (parsed.role === "user" || parsed.sender === "user" || dataObj?.role === "user") {
               role = "user";
             }
           }
@@ -211,6 +215,7 @@ export function useInterviewWs(
 
         if (extractedText) {
           cancelAiTyping();
+          setStreamingAiText("");
 
           const chatMsg: ChatMessage = {
             id: `${role}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -262,10 +267,12 @@ export function useInterviewWs(
       const sent = send<string>("chat", text);
       if (sent) {
         setIsAiTyping(true);
+        setStreamingAiText("");
 
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
           setIsAiTyping(false);
+          setStreamingAiText("");
           onMessageRef.current({
             id: `ai-timeout-${Date.now()}`,
             sender: "ai",
@@ -275,7 +282,7 @@ export function useInterviewWs(
               minute: "2-digit",
             }),
           });
-        }, 25000);
+        }, 30000);
       } else {
         cancelAiTyping();
       }
@@ -319,6 +326,7 @@ export function useInterviewWs(
     sendEdgeEvent,
     sendEdgeDeleted,
     isAiTyping,
+    streamingAiText,
     cancelAiTyping,
     reconnect,
   };

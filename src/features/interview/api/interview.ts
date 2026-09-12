@@ -38,7 +38,7 @@ export async function fetchInterviewDiagram(sessionId: string): Promise<DiagramR
 
 export function buildChatWsUrl(sessionId: string): string {
   const token = typeof window !== "undefined" ? localStorage.getItem("archon_access_token") ?? "" : "";
-  let apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  let apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8071";
 
   if (!apiBaseUrl.startsWith("http://") && !apiBaseUrl.startsWith("https://") && !apiBaseUrl.startsWith("ws://") && !apiBaseUrl.startsWith("wss://")) {
     if (typeof window !== "undefined") {

@@ -90,7 +90,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
         });
       })
       .catch(() => {
-        // keep defaults
       });
   }, []);
 
@@ -128,6 +127,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     sendEdgeEvent,
     sendEdgeDeleted,
     isAiTyping,
+    streamingAiText,
     cancelAiTyping,
     reconnect,
   } = useInterviewWs(sessionId, addMessage);
@@ -422,7 +422,8 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           <button
             onClick={handleSubmitDesign}
             disabled={submitInterviewMutation.isPending}
-            className="p-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium shadow-xs font-sans disabled:cursor-not-allowed"
+            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold font-sans transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            title="Finalize interview and generate AI evaluation report"
           >
             {submitInterviewMutation.isPending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -453,7 +454,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
       <div className="flex flex-1 overflow-hidden relative w-full">
         {isDiagramLoading && (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-[10px] text-zinc-500">
+          <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-850 text-[10px] text-zinc-500">
             <Loader2 className="h-3 w-3 animate-spin" />
             Restoring whiteboard...
           </div>
@@ -475,7 +476,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 && (
+            {messages.length === 0 && !streamingAiText && (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12 px-4">
                 {wsStatus === "error" || wsStatus === "closed" ? (
                   <>
@@ -534,7 +535,19 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
               </div>
             ))}
 
-            {isAiTyping && (
+            {streamingAiText && (
+              <div className="mr-auto items-start max-w-[85%] flex flex-col">
+                <div className="p-3 rounded-xl text-xs leading-relaxed font-sans bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-800/60 rounded-tl-none">
+                  {streamingAiText}
+                  <span className="inline-block w-1 h-3 ml-1 bg-primary/70 animate-pulse align-middle" />
+                </div>
+                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 px-1 font-sans">
+                  streaming...
+                </span>
+              </div>
+            )}
+
+            {isAiTyping && !streamingAiText && (
               <div className="mr-auto items-start max-w-[90%] space-y-1">
                 <div className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl rounded-tl-none border border-zinc-200/50 dark:border-zinc-850 flex items-center gap-2">
                   <div className="flex items-center gap-1">
