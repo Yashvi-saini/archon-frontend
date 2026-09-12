@@ -125,6 +125,9 @@ export interface ExcalidrawElementSnapshot {
   endBinding?: { elementId: string } | null;
   // For text bound to shapes
   containerId?: string | null;
+  groupIds?: readonly string[] | null;
+  boundElements?: readonly { id: string; type: string }[] | null;
+  customData?: Record<string, any> | null;
 }
 
 export interface DiagramNode {

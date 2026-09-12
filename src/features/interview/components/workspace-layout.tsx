@@ -13,6 +13,13 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  BookOpen,
+  Code2,
+  Copy,
+  Check,
+  UploadCloud,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -23,12 +30,13 @@ import { useInterviewDiagram } from "../hooks/use-interview-diagram";
 import { useSubmitInterview } from "../hooks/use-submit-interview";
 import {
   buildElementSnapshotMap,
-  diagramToExcalidrawElements,
   EDGE_SHAPE_TYPES,
   getElementLabel,
+  getDetectedArchitectureSummary,
   inferEdgeProtocol,
   NODE_SHAPE_TYPES,
   shapeToNodeType,
+  type DetectedArchitectureSummary,
 } from "../lib/diagram-utils";
 import type {
   CanvasPreferences,
@@ -73,7 +81,13 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const timeLimitSecs = timeLimitMinutes * 60;
   const isOvertime = seconds > timeLimitSecs;
 
+  const excalidrawApiRef = useRef<unknown>(null);
   const [excalidrawAPI, setExcalidrawAPI] = useState<unknown>(null);
+  const handleSetExcalidrawAPI = useCallback((api: unknown) => {
+    if (excalidrawApiRef.current === api) return;
+    excalidrawApiRef.current = api;
+    setExcalidrawAPI(api);
+  }, []);
   const [canvasPreferences, setCanvasPreferences] = useState<CanvasPreferences>({
     gridType: "dots",
     snapToGrid: true,
@@ -86,26 +100,40 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
         setCanvasPreferences({
           gridType: settings.canvasGridType,
           snapToGrid: settings.snapToGrid,
-          syncDebounceMs: Math.max(settings.autoSaveIntervalSeconds * 1000, 300),
+          syncDebounceMs: 500,
         });
       })
       .catch(() => {
       });
   }, []);
 
-  const { data: diagramData, isLoading: isDiagramLoading } = useInterviewDiagram(sessionId);
-
-  const restoredElements = useMemo(() => {
-    if (!diagramData?.nodes?.length) return undefined;
-    return diagramToExcalidrawElements(diagramData.nodes, diagramData.edges ?? []);
-  }, [diagramData]);
-
-  const diagramRestoredRef = useRef(false);
+  const { data: diagramData } = useInterviewDiagram(sessionId);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [typingSeconds, setTypingSeconds] = useState(0);
+  const [architectureSummary, setArchitectureSummary] = useState<DetectedArchitectureSummary | undefined>();
+  const [showJsonModal, setShowJsonModal] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleCopyJson = () => {
+    if (!architectureSummary) return;
+    const jsonStr = JSON.stringify(architectureSummary.jsonPayload, null, 2);
+    navigator.clipboard.writeText(jsonStr);
+    setCopiedJson(true);
+    toast.success("Architecture JSON copied to clipboard");
+    setTimeout(() => setCopiedJson(false), 2000);
+  };
+
+  const handleToggleLibrary = () => {
+    const api = excalidrawAPI as { toggleSidebar?: (options: { name: string }) => void } | null;
+    if (typeof api?.toggleSidebar === "function") {
+      api.toggleSidebar({ name: "default" });
+    } else {
+      toast.info("Open the Library drawer from Excalidraw's toolbar to browse components.");
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -143,12 +171,45 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     return () => clearInterval(interval);
   }, [isAiTyping]);
 
-  const getTypingStatusText = (secs: number) => {
-    if (secs < 3) return "Interviewer is thinking...";
-    if (secs < 8) return "Analyzing system design requirements...";
-    if (secs < 14) return "Synthesizing follow-up questions...";
-    return "Finalizing response from AI...";
+  const getTypingStatusText = () => {
+    return "Thinking...";
   };
+
+  // Auto-purge any leftover nodes from previous runs from backend DB on initial connect
+  const purgedInitialBackendRef = useRef(false);
+  useEffect(() => {
+    if (wsStatus !== "open" || !diagramData?.nodes?.length || purgedInitialBackendRef.current) return;
+    purgedInitialBackendRef.current = true;
+    for (const node of diagramData.nodes) {
+      sendNodeDeleted(node.id);
+    }
+  }, [wsStatus, diagramData?.nodes, sendNodeDeleted]);
+
+  const handleClearWhiteboard = useCallback(() => {
+    const api = excalidrawAPI as {
+      updateScene?: (scene: { elements: readonly unknown[] }) => void;
+      getSceneElements?: () => ExcalidrawElementSnapshot[];
+    } | null;
+
+    if (!api?.updateScene) return;
+
+    const currentElements = api.getSceneElements?.() || [];
+    for (const el of currentElements) {
+      if (!el.isDeleted) {
+        if (NODE_SHAPE_TYPES.has(el.type)) {
+          sendNodeDeleted(el.id);
+        } else if (EDGE_SHAPE_TYPES.has(el.type)) {
+          sendEdgeDeleted(el.id);
+        }
+      }
+    }
+
+    skipNextDiffRef.current = true;
+    api.updateScene({ elements: [] });
+    prevElementsRef.current = new Map();
+    setArchitectureSummary(undefined);
+    toast.success("Whiteboard cleared");
+  }, [excalidrawAPI, sendNodeDeleted, sendEdgeDeleted]);
 
   useEffect(() => {
     if (wsStatus === "open") toast.success("AI Interviewer connected", { id: "ws-status", duration: 2000 });
@@ -160,23 +221,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const pendingElementsRef = useRef<readonly ExcalidrawElementSnapshot[] | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNextDiffRef = useRef(false);
-
-  useEffect(() => {
-    if (!restoredElements?.length || diagramRestoredRef.current) return;
-
-    const api = excalidrawAPI as {
-      updateScene?: (scene: { elements: readonly unknown[] }) => void;
-      getSceneElements?: () => ExcalidrawElementSnapshot[];
-    } | null;
-
-    if (api?.updateScene) {
-      skipNextDiffRef.current = true;
-      api.updateScene({ elements: restoredElements });
-      const snapshot = api.getSceneElements?.() ?? (restoredElements as ExcalidrawElementSnapshot[]);
-      prevElementsRef.current = buildElementSnapshotMap(snapshot);
-      diagramRestoredRef.current = true;
-    }
-  }, [restoredElements, excalidrawAPI]);
 
   const runDiff = useCallback(
     (elements: readonly ExcalidrawElementSnapshot[]) => {
@@ -200,12 +244,13 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             }
           } else {
             const label = getElementLabel(el, elements);
+            const customType = el.customData?.componentType;
             const nodePayload: WsNodeData = {
               id: el.id,
-              type: shapeToNodeType(el.type, label),
+              type: shapeToNodeType(el.type, label, customType),
               label: label || `${el.type}-${id.slice(0, 6)}`,
-              x: el.x,
-              y: el.y,
+              x: Math.round(el.x),
+              y: Math.round(el.y),
             };
 
             if (!wasPresent || prevEl!.isDeleted) {
@@ -275,11 +320,89 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
       debounceTimerRef.current = setTimeout(() => {
         const snapshot = pendingElementsRef.current;
         if (!snapshot) return;
+
+        const summary = getDetectedArchitectureSummary(snapshot);
+        setArchitectureSummary((prev) => {
+          if (
+            prev &&
+            prev.totalComponents === summary.totalComponents &&
+            prev.edges.length === summary.edges.length &&
+            JSON.stringify(prev.componentCounts) === JSON.stringify(summary.componentCounts)
+          ) {
+            return prev;
+          }
+          return summary;
+        });
+
         runDiff(snapshot);
       }, canvasPreferences.syncDebounceMs);
     },
     [wsStatus, runDiff, canvasPreferences.syncDebounceMs]
   );
+
+  const handleSendArchitectureToAi = useCallback(
+    (summary: DetectedArchitectureSummary) => {
+      if (summary.totalComponents === 0) {
+        toast.error("Please place at least one architecture component first.");
+        return;
+      }
+      const breakdown = Object.entries(summary.componentCounts)
+        .map(([type, count]) => `${count}x ${type}`)
+        .join(", ");
+      const prompt = `I have updated my system design diagram with ${summary.totalComponents} components (${breakdown}) and ${summary.edges.length} connections. Please evaluate this architecture and suggest any optimizations, missing components (e.g. caching, queuing, or replication), or failure points.`;
+      const userMsg: ChatMessage = {
+        id: `user-arch-${Date.now()}`,
+        sender: "user",
+        text: prompt,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      addMessage(userMsg);
+      sendChat(prompt);
+      toast.success("Sent architecture summary to AI Interviewer");
+    },
+    [addMessage, sendChat]
+  );
+
+  const handleSyncAllNodes = useCallback(() => {
+    const api = excalidrawAPI as { getSceneElements: () => ExcalidrawElementSnapshot[] } | null;
+    const elements = api?.getSceneElements() ?? [];
+    const summary = getDetectedArchitectureSummary(elements);
+
+    if (summary.nodes.length === 0) {
+      toast.error("No components on the canvas to sync.");
+      return;
+    }
+
+    if (wsStatus !== "open") {
+      toast.error("WebSocket connection is not open. Please check connection status.");
+      return;
+    }
+
+    let count = 0;
+    for (const node of summary.nodes) {
+      const nodePayload: WsNodeData = {
+        id: node.id,
+        type: node.type,
+        label: node.label,
+        x: node.x,
+        y: node.y,
+      };
+      sendNodeEvent("node_added", nodePayload);
+      count++;
+    }
+
+    for (const edge of summary.edges) {
+      const edgePayload: WsEdgeData = {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: edge.type,
+      };
+      sendEdgeEvent("edge_added", edgePayload);
+    }
+
+    toast.success(`Dispatched ${count} components and ${summary.edges.length} connections to backend!`);
+  }, [excalidrawAPI, wsStatus, sendNodeEvent, sendEdgeEvent]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,6 +533,35 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           </button>
 
           <button
+            onClick={handleToggleLibrary}
+            className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
+            title="Browse System Design Component Stencils in Library Drawer"
+          >
+            <BookOpen className="h-3.5 w-3.5 text-primary" />
+            <span className="hidden sm:inline font-semibold">Components Library</span>
+          </button>
+
+          <button
+            onClick={handleClearWhiteboard}
+            className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
+            title="Clear whiteboard canvas and delete from server"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+            <span className="hidden sm:inline">Clear Board</span>
+          </button>
+
+          <button
+            onClick={() => setShowJsonModal(true)}
+            className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
+            title="Inspect detected diagram JSON synced to backend"
+          >
+            <Code2 className="h-3.5 w-3.5 text-emerald-500" />
+            <span className="hidden sm:inline">
+              {architectureSummary?.totalComponents ?? 0} components
+            </span>
+          </button>
+
+          <button
             onClick={handleGetAiFeedback}
             disabled={wsStatus !== "open" || isAiTyping}
             className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans disabled:opacity-50 disabled:cursor-not-allowed"
@@ -453,17 +605,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
       )}
 
       <div className="flex flex-1 overflow-hidden relative w-full">
-        {isDiagramLoading && (
-          <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/90 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-850 text-[10px] text-zinc-500">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Restoring whiteboard...
-          </div>
-        )}
-
         <WhiteboardCanvas
-          setExcalidrawAPI={setExcalidrawAPI}
+          setExcalidrawAPI={handleSetExcalidrawAPI}
           onSceneChange={handleSceneChange}
-          initialElements={restoredElements}
           canvasPreferences={canvasPreferences}
         />
 
@@ -602,6 +746,99 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           </form>
         </div>
       </div>
+
+      {showJsonModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Code2 className="h-5 w-5 text-primary" />
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                    Detected Architecture Payload
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Active JSON representation sent over WebSocket to backend
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowJsonModal(false)}
+                className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 px-2 py-1 rounded-md cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {architectureSummary && Object.keys(architectureSummary.componentCounts).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-3">
+                {Object.entries(architectureSummary.componentCounts).map(([type, count]) => (
+                  <span
+                    key={type}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  >
+                    {count}x {type}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto my-3 bg-zinc-950 text-zinc-100 rounded-xl p-3 font-mono text-[11px] leading-relaxed border border-zinc-800 select-all">
+              <pre>
+                {JSON.stringify(architectureSummary?.jsonPayload ?? {}, null, 2)}
+              </pre>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800 flex-wrap gap-2">
+              <span className="text-[11px] text-zinc-500 font-sans">
+                {architectureSummary?.totalComponents ?? 0} components • {architectureSummary?.edges.length ?? 0} connections
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyJson}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors cursor-pointer"
+                >
+                  {copiedJson ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Copy JSON</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncAllNodes}
+                  disabled={wsStatus !== "open"}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <UploadCloud className="h-3.5 w-3.5" />
+                  <span>Sync JSON to Backend</span>
+                </button>
+                {architectureSummary && architectureSummary.totalComponents > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSendArchitectureToAi(architectureSummary);
+                      setShowJsonModal(false);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Ask AI Review</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

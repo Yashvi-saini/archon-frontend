@@ -35,7 +35,7 @@ export function useInterviewWs(
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [streamingAiText, setStreamingAiText] = useState("");
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingQueueRef = useRef<string[]>([]);
 
   const onMessageRef = useRef(onMessage);
   useEffect(() => {
@@ -43,10 +43,6 @@ export function useInterviewWs(
   }, [onMessage]);
 
   const cancelAiTyping = useCallback(() => {
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
     setIsAiTyping(false);
     setStreamingAiText("");
   }, []);
@@ -116,6 +112,20 @@ export function useInterviewWs(
           return;
         }
         setWsStatus("open");
+        console.log(
+          `[useInterviewWs] WebSocket connected. Flushing ${pendingQueueRef.current.length} pending queued messages.`
+        );
+        while (pendingQueueRef.current.length > 0) {
+          const raw = pendingQueueRef.current.shift();
+          if (raw) {
+            try {
+              ws.send(raw);
+              console.log("[useInterviewWs] Flushed queued message:", raw);
+            } catch (err) {
+              console.error("[useInterviewWs] Error flushing queued message:", err);
+            }
+          }
+        }
       };
 
       ws.onclose = () => {
@@ -254,12 +264,29 @@ export function useInterviewWs(
 
   const send = useCallback(<T>(type: WsOutgoingType, data: T): boolean => {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      return false;
-    }
     const envelope: WsEnvelope<T> = { type, data };
-    ws.send(JSON.stringify(envelope));
-    return true;
+    const raw = JSON.stringify(envelope);
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(raw);
+        console.log(`[useInterviewWs] Sent ${type}:`, envelope);
+        return true;
+      } catch (err) {
+        console.error(`[useInterviewWs] Failed to send ${type}:`, err);
+        return false;
+      }
+    }
+
+    if (ws && ws.readyState === WebSocket.CONNECTING) {
+      console.warn(`[useInterviewWs] WebSocket is connecting. Queued ${type}:`, envelope);
+      pendingQueueRef.current.push(raw);
+      return true;
+    }
+
+    console.warn(`[useInterviewWs] WebSocket not open (state: ${ws?.readyState}). Queued ${type}:`, envelope);
+    pendingQueueRef.current.push(raw);
+    return false;
   }, []);
 
   const sendChat = useCallback(
@@ -268,21 +295,6 @@ export function useInterviewWs(
       if (sent) {
         setIsAiTyping(true);
         setStreamingAiText("");
-
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => {
-          setIsAiTyping(false);
-          setStreamingAiText("");
-          onMessageRef.current({
-            id: `ai-timeout-${Date.now()}`,
-            sender: "ai",
-            text: "The AI interviewer took too long to respond. The system may still be processing your previous answer, or you can try sending your clarification again.",
-            timestamp: new Date().toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          });
-        }, 30000);
       } else {
         cancelAiTyping();
       }
