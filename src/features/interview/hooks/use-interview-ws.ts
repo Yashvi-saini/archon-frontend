@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { buildChatWsUrl } from "../api/interview";
 import type {
-  WsEnvelope,
-  WsOutgoingType,
-  WsNodeData,
-  WsNodeDeletedData,
+  ChatMessage,
   WsEdgeData,
   WsEdgeDeletedData,
-  ChatMessage,
+  WsEnvelope,
+  WsNodeData,
+  WsNodeDeletedData,
+  WsOutgoingType,
 } from "../types";
 
 export type WsStatus = "connecting" | "open" | "closed" | "error";
@@ -62,7 +62,7 @@ export function useInterviewWs(
       if (!refreshToken) return;
 
       try {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
         const res = await fetch(`${apiBaseUrl}/refresh`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -77,11 +77,9 @@ export function useInterviewWs(
             data?.accessToken;
           if (newAccessToken) {
             localStorage.setItem("archon_access_token", newAccessToken);
-            console.log("[WS] Refreshed token successfully for WebSocket");
           }
         }
       } catch {
-        // ignore
       }
     };
 
@@ -94,7 +92,6 @@ export function useInterviewWs(
           : null;
 
       if (!token) {
-        console.warn("[WS] No access token — attempting token refresh before connect");
         tryRefreshToken().then(() => {
           if (active && localStorage.getItem("archon_access_token")) {
             connect();
@@ -106,7 +103,6 @@ export function useInterviewWs(
       }
 
       const url = buildChatWsUrl(sessionId);
-      console.log("[WS] Connecting to:", url);
       const ws = new WebSocket(url);
       wsRef.current = ws;
       setWsStatus("connecting");
@@ -116,13 +112,11 @@ export function useInterviewWs(
           ws.close();
           return;
         }
-        console.log("[WS] Connected successfully");
         setWsStatus("open");
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         if (!active) return;
-        console.log("[WS] Connection closed:", event.code, event.reason);
         setWsStatus("closed");
         cancelAiTyping();
 
@@ -136,9 +130,8 @@ export function useInterviewWs(
         }
       };
 
-      ws.onerror = async (err) => {
+      ws.onerror = async () => {
         if (!active) return;
-        console.error("[WS] Connection error:", err);
         setWsStatus("error");
         cancelAiTyping();
         await tryRefreshToken();
@@ -148,26 +141,67 @@ export function useInterviewWs(
         if (!active) return;
 
         const rawData = typeof event.data === "string" ? event.data : "";
-        console.log("[WS Received]:", rawData);
-
         let extractedText: string | null = null;
-        let parsedPayload: Record<string, unknown> | null = null;
+        let role: "ai" | "user" = "ai";
 
         try {
           const parsed = JSON.parse(rawData) as Record<string, unknown>;
 
           if (parsed && typeof parsed === "object") {
-            parsedPayload = parsed;
-            extractedText =
-              (parsed.content as string | undefined) ||
-              (parsed.response as string | undefined) ||
-              (parsed.text as string | undefined) ||
-              (parsed.message as string | undefined) ||
-              (typeof parsed.data === "string"
-                ? parsed.data
-                : (parsed.data as Record<string, unknown> | undefined)?.content as string ||
-                  (parsed.data as Record<string, unknown> | undefined)?.response as string) ||
-              null;
+            const msgType = parsed.type as string | undefined;
+
+            if (msgType === "status") {
+              const dataObj = parsed.data as Record<string, unknown> | undefined;
+              if (dataObj?.status === "thinking" || parsed.status === "thinking") {
+                setIsAiTyping(true);
+              }
+              return;
+            }
+
+            if (msgType === "error") {
+              cancelAiTyping();
+              const dataObj = parsed.data as Record<string, unknown> | undefined;
+              const errorText =
+                (dataObj?.message as string | undefined) ||
+                (parsed.message as string | undefined) ||
+                "Failed to process message";
+              onMessageRef.current({
+                id: `err-${Date.now()}`,
+                sender: "ai",
+                text: `⚠️ ${errorText}`,
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              });
+              return;
+            }
+
+            if (msgType === "chunk") {
+              const dataObj = parsed.data as Record<string, unknown> | undefined;
+              if (dataObj?.delta) {
+                extractedText = String(dataObj.delta);
+              }
+            }
+
+            if (!extractedText) {
+              const dataObj = parsed.data as Record<string, unknown> | undefined;
+              extractedText =
+                (parsed.content as string | undefined) ||
+                (parsed.response as string | undefined) ||
+                (parsed.text as string | undefined) ||
+                (parsed.message as string | undefined) ||
+                (typeof parsed.data === "string"
+                  ? parsed.data
+                  : (dataObj?.content as string | undefined) ||
+                    (dataObj?.response as string | undefined) ||
+                    (dataObj?.message as string | undefined)) ||
+                null;
+            }
+
+            if (parsed.role === "user" || parsed.sender === "user") {
+              role = "user";
+            }
           }
         } catch {
           if (rawData.trim()) {
@@ -177,11 +211,6 @@ export function useInterviewWs(
 
         if (extractedText) {
           cancelAiTyping();
-
-          const role =
-            parsedPayload?.role === "user" || parsedPayload?.sender === "user"
-              ? "user"
-              : "ai";
 
           const chatMsg: ChatMessage = {
             id: `${role}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -221,11 +250,9 @@ export function useInterviewWs(
   const send = useCallback(<T>(type: WsOutgoingType, data: T): boolean => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn(`[WS] Cannot send "${type}" — not open (state=${ws?.readyState})`);
       return false;
     }
     const envelope: WsEnvelope<T> = { type, data };
-    console.log("[WS Sent]:", envelope);
     ws.send(JSON.stringify(envelope));
     return true;
   }, []);

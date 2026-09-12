@@ -38,9 +38,19 @@ export async function fetchInterviewDiagram(sessionId: string): Promise<DiagramR
 
 export function buildChatWsUrl(sessionId: string): string {
   const token = typeof window !== "undefined" ? localStorage.getItem("archon_access_token") ?? "" : "";
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+  let apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+  if (!apiBaseUrl.startsWith("http://") && !apiBaseUrl.startsWith("https://") && !apiBaseUrl.startsWith("ws://") && !apiBaseUrl.startsWith("wss://")) {
+    if (typeof window !== "undefined") {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      apiBaseUrl = `${protocol}//${window.location.host}${apiBaseUrl.startsWith("/") ? "" : "/"}${apiBaseUrl}`;
+    }
+  }
+
   const wsBase = apiBaseUrl
-    .replace(/^https/, "wss")
-    .replace(/^http/, "ws");
+    .replace(/^https:/, "wss:")
+    .replace(/^http:/, "ws:")
+    .replace(/\/+$/, "");
+
   return `${wsBase}/ai/chat?session_id=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(token)}`;
 }
