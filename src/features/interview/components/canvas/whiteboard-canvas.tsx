@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import "@excalidraw/excalidraw/index.css";
 import type { CanvasPreferences, ExcalidrawElementSnapshot } from "../../types";
 import { getSystemDesignLibraryItems } from "../../lib/system-design-library";
+import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 
 const Excalidraw = dynamic(
   async () => {
@@ -26,29 +27,30 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onSceneChange,
   canvasPreferences,
 }) => {
-  const { resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === "dark";
+  const { setTheme } = useTheme();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [activeApi, setActiveApi] = useState<any>(null);
   const apiRef = useRef<unknown>(null);
   const libraryLoadedRef = useRef(false);
   const lastElementsRef = useRef<readonly unknown[] | null>(null);
 
-  const gridEnabled = canvasPreferences?.gridType !== "blank";
-
   // Pre-generate system design library items (individual components) once
   const systemDesignLib = useRef(getSystemDesignLibraryItems());
 
-  // Clean old duplicate library cache from localStorage on client mount
+  // Clean old duplicate library cache and ensure dark theme in storage
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
         window.localStorage.removeItem("excalidraw-library");
+        window.localStorage.removeItem("theme");
+        window.localStorage.setItem("archon-theme-v2", "dark");
+        window.localStorage.setItem("excalidraw-theme", "dark");
+        setTheme("dark");
       } catch {
         // ignore storage errors
       }
     }
-  }, []);
+  }, [setTheme]);
 
   // Load system design components into Excalidraw's native Library drawer (no duplication)
   useEffect(() => {
@@ -66,6 +68,25 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       }
     } catch (err) {
       console.warn("[WhiteboardCanvas] Could not update Excalidraw library drawer:", err);
+    }
+  }, [activeApi]);
+
+  // Safely sync dark theme to Excalidraw after mount
+  useEffect(() => {
+    if (!activeApi) return;
+    try {
+      if (typeof activeApi.updateScene === "function") {
+        activeApi.updateScene({
+          appState: {
+            gridModeEnabled: false,
+            viewBackgroundColor: "#121212",
+            currentItemStrokeColor: "#e4e4e7",
+            theme: "dark",
+          },
+        });
+      }
+    } catch {
+      // ignore
     }
   }, [activeApi]);
 
@@ -90,24 +111,27 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     [onSceneChange]
   );
 
-  const initialData = useMemo(() => {
+  // Default initial canvas state is strictly dark themed and blank
+  const initialData: ExcalidrawInitialDataState = useMemo(() => {
     return {
-      elements: [] as never[],
+      elements: [],
       appState: {
-        viewBackgroundColor: isDarkMode ? "#0b0c10" : "#fafafa",
-        currentItemStrokeColor: "#1e1e1e",
-        objectsSnapModeEnabled: canvasPreferences?.snapToGrid ?? true,
+        viewBackgroundColor: "#121212",
+        currentItemStrokeColor: "#e4e4e7",
+        gridModeEnabled: false,
+        objectsSnapModeEnabled: false,
         openSidebar: { name: "default" },
+        theme: "dark" as const,
       },
     };
-  }, [isDarkMode, canvasPreferences?.snapToGrid]);
+  }, []);
 
   return (
-    <div className="flex-1 w-full h-full relative bg-zinc-50 dark:bg-[#0b0c10] border-r border-zinc-200 dark:border-zinc-850 overflow-hidden">
+    <div className="flex-1 w-full h-full relative bg-[#121212] border-r border-zinc-200 dark:border-zinc-850 overflow-hidden">
       <Excalidraw
         excalidrawAPI={handleExcalidrawApi}
-        theme={isDarkMode ? "dark" : "light"}
-        gridModeEnabled={gridEnabled}
+        theme="dark"
+        gridModeEnabled={false}
         initialData={initialData}
         onChange={handleChange}
       />

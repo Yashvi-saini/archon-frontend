@@ -89,17 +89,17 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     setExcalidrawAPI(api);
   }, []);
   const [canvasPreferences, setCanvasPreferences] = useState<CanvasPreferences>({
-    gridType: "dots",
-    snapToGrid: true,
+    gridType: "blank",
+    snapToGrid: false,
     syncDebounceMs: 500,
   });
 
   useEffect(() => {
     fetchUserSettings()
-      .then((settings) => {
+      .then(() => {
         setCanvasPreferences({
-          gridType: settings.canvasGridType,
-          snapToGrid: settings.snapToGrid,
+          gridType: "blank",
+          snapToGrid: false,
           syncDebounceMs: 500,
         });
       })
@@ -171,7 +171,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     return () => clearInterval(interval);
   }, [isAiTyping]);
 
-  const getTypingStatusText = () => {
+  const getTypingStatusText = (_seconds?: number) => {
     return "Thinking...";
   };
 
