@@ -40,24 +40,24 @@ export function ReportDetail({ report, onBack }: ReportDetailProps) {
         <div className="space-y-3 max-w-xl">
           <div className="flex items-center gap-2 flex-wrap">
             <span
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-bold ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 ${
                 isPass
-                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                  : "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                  ? "text-teal-600 dark:text-teal-400"
+                  : "text-amber-600 dark:text-amber-400"
               }`}
             >
-              <CheckCircle2 className="h-3 w-3" /> {isPass ? "Passed Senior Bar" : "Revision Suggested"}
+              <CheckCircle2 className="h-3.5 w-3.5" /> {isPass ? "Passed Senior Bar" : "Revision Suggested"}
             </span>
-            <span className="text-xs font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-400">
+            <span className="text-xs uppercase px-2.5 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 font-medium">
               {report.difficulty}
             </span>
-            <span className="text-xs font-mono text-zinc-400">
+            <span className="text-xs text-zinc-400">
               ID: {report.sessionId.slice(0, 8)}...
             </span>
           </div>
 
           <div>
-            <h2 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
               {report.title}
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
@@ -82,15 +82,15 @@ export function ReportDetail({ report, onBack }: ReportDetailProps) {
             size={110}
             strokeWidth={9}
             label="Overall"
-            sublabel={`Top ${100 - report.percentile}%`}
-            colorClassName={isPass ? "text-emerald-500" : "text-amber-500"}
+            sublabel={report.percentile >= 50 ? `Top ${100 - report.percentile}%` : report.percentile > 0 ? `${report.percentile}th percentile` : "Score / 100"}
+            colorClassName={isPass ? "text-emerald-500" : report.overallScore >= 40 ? "text-amber-500" : "text-[#BA68C8]"}
           />
           <div className="text-center">
             <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block">
-              Percentile Rank
+              Peer Standing
             </span>
-            <span className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
-              {report.percentile}th percentile
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+              {report.percentile >= 50 ? `Top ${100 - report.percentile}% of candidates` : report.percentile > 0 ? `${report.percentile}th percentile` : "Baseline session"}
             </span>
           </div>
         </div>

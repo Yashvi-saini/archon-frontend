@@ -47,7 +47,7 @@ export function QuizScoreModal({
           </div>
 
           <div>
-            <h2 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
               {isPass ? "Excellent Architecture Comprehension!" : "Deck Complete — Review Recommended"}
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">

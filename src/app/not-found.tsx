@@ -26,7 +26,7 @@ export default function NotFound() {
       <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/10 to-black/95 pointer-events-none z-10" />
 
       <div className="relative z-20 text-center flex flex-col items-center gap-6 animate-in fade-in duration-700">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-widest text-white font-sans drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-widest text-white font-sans drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]">
           PAGE NOT FOUND
         </h1>
         

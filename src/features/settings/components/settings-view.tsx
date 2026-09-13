@@ -82,13 +82,13 @@ export function SettingsView() {
     return (
       <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">Workspace Settings</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Workspace Settings</h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5">
             Customize target level calibrations, AI interviewer rigor, and whiteboarding preferences.
           </p>
         </div>
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-          <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-full">
+          <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-500/20 rounded-full">
             <RefreshCw className="h-6 w-6 text-rose-500" />
           </div>
           <div>
@@ -111,7 +111,7 @@ export function SettingsView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Workspace Settings
             </h1>
             {isServerLoading && (
@@ -159,11 +159,11 @@ export function SettingsView() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left ${
                   isActive
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-850 hover:text-zinc-900 dark:hover:text-zinc-100"
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/60 shadow-xs font-bold"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100/70 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-zinc-200 border border-transparent"
                 }`}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-zinc-400 dark:text-zinc-500"}`} />
                 <span>{tab.label}</span>
               </button>
             );

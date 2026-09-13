@@ -37,7 +37,7 @@ export function ReportsList({ reports, onSelectReport }: ReportsListProps) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs">
           <span className="text-xs text-zinc-400 font-medium">Evaluated Sessions</span>
-          <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50 mt-1">
+          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
             {reports.length}
           </p>
           <span className="text-[11px] text-zinc-400">Total mock interviews logged</span>
@@ -46,7 +46,7 @@ export function ReportsList({ reports, onSelectReport }: ReportsListProps) {
         <div className="p-5 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs">
           <span className="text-xs text-zinc-400 font-medium">Average Evaluation</span>
           <div className="flex items-baseline gap-1 mt-1">
-            <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{avgScore}</p>
+            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{avgScore}</p>
             <span className="text-xs text-zinc-400">/ 100</span>
           </div>
           <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
@@ -57,7 +57,7 @@ export function ReportsList({ reports, onSelectReport }: ReportsListProps) {
         <div className="p-5 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs">
           <span className="text-xs text-zinc-400 font-medium">Personal Best</span>
           <div className="flex items-baseline gap-1 mt-1">
-            <p className="text-2xl font-black text-primary">{highestScore}</p>
+            <p className="text-2xl font-bold text-primary">{highestScore}</p>
             <span className="text-xs text-zinc-400">/ 100</span>
           </div>
           <span className="text-[11px] text-zinc-400">Distributed Cache session</span>
@@ -102,11 +102,11 @@ export function ReportsList({ reports, onSelectReport }: ReportsListProps) {
           filteredReports.map((report) => {
             const isHigh = report.overallScore >= 80;
             const isMid = report.overallScore >= 70 && report.overallScore < 80;
-            const badgeClass = isHigh
-              ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
+            const badgeColor = isHigh
+              ? "text-teal-600 dark:text-teal-400"
               : isMid
-              ? "text-sky-600 bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800"
-              : "text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800";
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-rose-600 dark:text-rose-400";
 
             return (
               <div
@@ -116,13 +116,13 @@ export function ReportsList({ reports, onSelectReport }: ReportsListProps) {
               >
                 <div className="space-y-2 max-w-2xl">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-mono uppercase px-2 py-0.2 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-400">
+                    <span className="text-xs uppercase px-2.5 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 font-medium">
                       {report.difficulty}
                     </span>
                     <span className="text-xs text-zinc-400">
                       {report.date}
                     </span>
-                    <span className="text-xs text-zinc-400 font-mono">
+                    <span className="text-xs text-zinc-400">
                       • {report.duration}
                     </span>
                   </div>
@@ -138,7 +138,7 @@ export function ReportsList({ reports, onSelectReport }: ReportsListProps) {
 
                 <div className="flex items-center justify-between md:justify-end gap-5 shrink-0">
                   <div className="text-right">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded border inline-block ${badgeClass}`}>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 bg-zinc-100 dark:bg-zinc-800 inline-block ${badgeColor}`}>
                       {report.overallScore} / 100
                     </span>
                     <span className="block text-[10px] text-zinc-400 mt-1">

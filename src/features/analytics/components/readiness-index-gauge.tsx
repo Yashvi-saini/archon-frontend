@@ -2,7 +2,7 @@
 
 import React from "react";
 import { RadialScoreGauge } from "@/components/ui/svg-charts";
-import { Target, TrendingUp } from "lucide-react";
+import { Target, TrendingUp, AlertTriangle, CheckCircle2, Clock, Info } from "lucide-react";
 
 interface ReadinessIndexGaugeProps {
   score: number;
@@ -11,15 +11,102 @@ interface ReadinessIndexGaugeProps {
 }
 
 export function ReadinessIndexGauge({ score, percentile, targetLevel }: ReadinessIndexGaugeProps) {
+  // Dynamically evaluate peer standing without dummy or misleading phrases
+  const getPeerStanding = () => {
+    if (score === 0) {
+      return {
+        title: "Uncalibrated",
+        subtitle: "Complete mock sessions to establish ranking",
+      };
+    }
+    if (score <= 20) {
+      return {
+        title: "Foundational Tier",
+        subtitle: `Calibrating baseline · ${score}/100 pts`,
+      };
+    }
+    if (score < 50) {
+      return {
+        title: "Developing Tier",
+        subtitle: percentile > 0 ? `${percentile}th percentile` : "Baseline in progress",
+      };
+    }
+    if (score < 75) {
+      const topPct = Math.max(1, 100 - percentile);
+      return {
+        title: "Intermediate Tier",
+        subtitle: `Top ${topPct}% of candidates`,
+      };
+    }
+    const topPct = Math.max(1, 100 - percentile);
+    return {
+      title: "Top Tier Candidate",
+      subtitle: `Top ${topPct}% of candidates`,
+    };
+  };
+
+  // Dynamically evaluate readiness badge
+  const getStatusPill = () => {
+    const levelName = targetLevel ? targetLevel.replace(" Software Engineer", "") : "Target";
+
+    if (score === 0) {
+      return {
+        text: "Initial Assessment Pending",
+        icon: Info,
+        textColor: "text-zinc-500 dark:text-zinc-400",
+        dotColor: "bg-zinc-400",
+      };
+    }
+    if (score < 25) {
+      return {
+        text: "Needs Foundational Practice",
+        icon: AlertTriangle,
+        textColor: "text-rose-600 dark:text-rose-400",
+        dotColor: "bg-rose-500",
+      };
+    }
+    if (score < 50) {
+      return {
+        text: "Core Competency Developing",
+        icon: Clock,
+        textColor: "text-amber-600 dark:text-amber-400",
+        dotColor: "bg-amber-500",
+      };
+    }
+    if (score < 75) {
+      return {
+        text: `Approaching ${levelName} Bar`,
+        icon: TrendingUp,
+        textColor: "text-sky-600 dark:text-sky-400",
+        dotColor: "bg-sky-500",
+      };
+    }
+    return {
+      text: `Ready for ${levelName} Loop`,
+      icon: CheckCircle2,
+      textColor: "text-teal-600 dark:text-teal-400",
+      dotColor: "bg-teal-500",
+    };
+  };
+
+  const peerStanding = getPeerStanding();
+  const statusPill = getStatusPill();
+  const StatusIcon = statusPill.icon;
+
+  const gaugeColor = 
+    score >= 75 ? "text-teal-500" :
+    score >= 45 ? "text-amber-500" :
+    score > 0 ? "text-[#BA68C8]" : "text-zinc-400";
+
   return (
-    <div className="p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs flex flex-col justify-between space-y-6">
+    <div className="p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl shadow-xs flex flex-col justify-between space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
             Architecture Readiness Index
           </h3>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Probabilistic readiness score for Tier 1 interviews
+            Probabilistic readiness score for Tier-1 system design interview loops
           </p>
         </div>
         <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
@@ -34,33 +121,41 @@ export function ReadinessIndexGauge({ score, percentile, targetLevel }: Readines
           strokeWidth={12}
           label="Readiness"
           sublabel="Scale 0-100"
-          colorClassName="text-primary"
+          colorClassName={gaugeColor}
         />
 
-        <div className="space-y-2 text-center sm:text-left">
+        <div className="space-y-3 text-center sm:text-left">
           <div>
             <span className="text-xs text-zinc-400 block font-medium">Peer Standing</span>
             <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              Top {100 - percentile}% of candidates
+              {peerStanding.title}
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400 block font-mono mt-0.5">
+              {peerStanding.subtitle}
             </span>
           </div>
 
           <div>
             <span className="text-xs text-zinc-400 block font-medium">Target Calibration</span>
             <span className="text-xs font-semibold text-primary">
-              {targetLevel}
+              {targetLevel || "Senior Software Engineer"}
             </span>
           </div>
 
-          <div className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-            <TrendingUp className="h-3 w-3" /> Ready for Senior loop
+          {/* Dynamic LeetCode Styled Status Capsule */}
+          <div>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 ${statusPill.textColor}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${statusPill.dotColor}`} />
+              <StatusIcon className="h-3 w-3" />
+              <span>{statusPill.text}</span>
+            </span>
           </div>
         </div>
       </div>
 
       <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 text-center sm:text-left">
         <p className="text-[11px] text-zinc-400">
-          Scored by combining whiteboard topological correctness, latency estimates, and trade-off depth.
+          Calibrated dynamically from whiteboard topological accuracy, latency estimations, and trade-off depth.
         </p>
       </div>
     </div>

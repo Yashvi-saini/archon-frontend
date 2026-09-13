@@ -14,7 +14,7 @@ export function RecentInterviewsList({ interviews }: RecentInterviewsListProps) 
     <div className="p-7 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl shadow-xs space-y-5 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-50">
+          <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
             Recent Mock Interviews
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
@@ -31,13 +31,16 @@ export function RecentInterviewsList({ interviews }: RecentInterviewsListProps) 
 
       <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
         {interviews.map((item) => {
+          const isPending = item.score === null;
           const isHigh = item.score !== null && item.score >= 80;
-          const isMedium = item.score !== null && item.score >= 70 && item.score < 80;
-          const scoreBadge = isHigh
-            ? "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/50 dark:border-emerald-800"
+          const isMedium = item.score !== null && item.score >= 60 && item.score < 80;
+          const scoreTextColor = isPending
+            ? "text-zinc-500 dark:text-zinc-400"
+            : isHigh
+            ? "text-teal-600 dark:text-teal-400"
             : isMedium
-            ? "text-sky-600 bg-sky-50 border-sky-200 dark:bg-sky-950/50 dark:border-sky-800"
-            : "text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/50 dark:border-amber-800";
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-rose-600 dark:text-rose-400";
 
           return (
             <div
@@ -49,7 +52,7 @@ export function RecentInterviewsList({ interviews }: RecentInterviewsListProps) 
                   <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-primary transition-colors">
                     {item.title}
                   </span>
-                  <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-400 font-medium">
+                  <span className="text-xs uppercase px-2.5 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 font-medium">
                     {item.difficulty}
                   </span>
                 </div>
@@ -64,7 +67,7 @@ export function RecentInterviewsList({ interviews }: RecentInterviewsListProps) 
 
               <div className="flex items-center gap-3.5">
                 <div className="text-right">
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${scoreBadge}`}>
+                  <span className={`text-xs font-medium px-3 py-1 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 bg-zinc-100 dark:bg-zinc-800 ${scoreTextColor}`}>
                     {item.score !== null ? `${item.score}/100` : "Pending"}
                   </span>
                 </div>

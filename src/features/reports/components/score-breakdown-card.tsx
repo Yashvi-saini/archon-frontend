@@ -23,11 +23,11 @@ export function ScoreBreakdownCard({ rubrics }: ScoreBreakdownCardProps) {
         {rubrics.map((r) => {
           const isHigh = r.score >= 85;
           const isMid = r.score >= 75 && r.score < 85;
-          const badgeClass = isHigh
-            ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
+          const badgeColor = isHigh
+            ? "text-teal-600 dark:text-teal-400"
             : isMid
-            ? "text-sky-600 bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800"
-            : "text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800";
+            ? "text-sky-600 dark:text-sky-400"
+            : "text-amber-600 dark:text-amber-400";
 
           return (
             <div
@@ -44,7 +44,7 @@ export function ScoreBreakdownCard({ rubrics }: ScoreBreakdownCardProps) {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded border ${badgeClass}`}>
+                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 ${badgeColor}`}>
                     {r.score}/100
                   </span>
                 </div>

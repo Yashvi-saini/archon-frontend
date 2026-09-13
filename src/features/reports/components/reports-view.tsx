@@ -67,7 +67,7 @@ export function ReportsView() {
       {!selectedReport && (
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Interview Reports &amp; Audits
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">

@@ -18,7 +18,7 @@ import {
   Copy,
   Check,
   UploadCloud,
-  Sparkles,
+  Bot,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -464,18 +464,18 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const WsBadge = () => {
     if (wsStatus === "open")
       return (
-        <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-md border border-emerald-200/40 dark:border-emerald-800">
-          <Wifi className="h-3 w-3" /> Session Active
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-teal-600 dark:text-teal-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /> Session Active
         </span>
       );
     if (wsStatus === "connecting")
       return (
-        <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-md border border-amber-200/40 dark:border-amber-800">
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
           <Loader2 className="h-3 w-3 animate-spin" /> Connecting...
         </span>
       );
     return (
-      <span className="flex items-center gap-1 text-[10px] font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-md border border-rose-200/40 dark:border-rose-800">
+      <span className="flex items-center gap-1.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
         <WifiOff className="h-3 w-3" /> Disconnected
       </span>
     );
@@ -509,14 +509,14 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
         <div className="flex items-center gap-2">
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border font-sans ${
+            className={`flex items-center gap-2 px-3 py-1 rounded-full border font-sans ${
               isOvertime
-                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800"
-                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                ? "bg-zinc-100 dark:bg-zinc-800 border-rose-300 dark:border-rose-500/40"
+                : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200/50 dark:border-zinc-700/50"
             }`}
           >
             <Clock className={`h-3.5 w-3.5 flex-shrink-0 ${isOvertime ? "text-rose-500" : "text-zinc-500 dark:text-zinc-400"}`} />
-            <span className={`text-xs font-semibold font-mono leading-none ${isOvertime ? "text-rose-600 dark:text-rose-400" : "text-zinc-700 dark:text-zinc-300"}`}>
+            <span className={`text-xs font-medium font-mono leading-none ${isOvertime ? "text-rose-600 dark:text-rose-400" : "text-zinc-700 dark:text-zinc-300"}`}>
               {formatTime(seconds)}
             </span>
           </div>
@@ -596,7 +596,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           {expectedTopics.map((topic) => (
             <span
               key={topic}
-              className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
+              className="text-[10px] px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-600 dark:text-zinc-400 font-medium"
             >
               {topic}
             </span>
@@ -776,7 +776,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                 {Object.entries(architectureSummary.componentCounts).map(([type, count]) => (
                   <span
                     key={type}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
+                    className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-700 dark:text-zinc-300"
                   >
                     {count}x {type}
                   </span>
@@ -830,7 +830,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                     }}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors cursor-pointer"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Bot className="h-3.5 w-3.5" />
                     <span>Ask AI Review</span>
                   </button>
                 )}

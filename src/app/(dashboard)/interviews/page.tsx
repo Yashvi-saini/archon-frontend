@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Network, ArrowRight, MessageSquare, Car, Video, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStartInterview } from "@/features/interview/hooks/use-start-interview";
 import { fetchInterviewQuestions } from "@/features/interview/api/interview";
@@ -16,10 +16,8 @@ interface TopicCard {
   questionId?: string;
   title: string;
   desc: string;
-  icon: React.ElementType;
   difficulty: DifficultyKey;
   estTime: string;
-  color: string;
   expectedTopics?: string[];
 }
 
@@ -28,37 +26,29 @@ const FALLBACK_TOPICS: TopicCard[] = [
     id: "whatsapp",
     title: "WhatsApp System Design",
     desc: "Design a real-time messaging pipeline to support 100M active daily users with instant delivery status and offline queuing.",
-    icon: MessageSquare,
     difficulty: "hard",
     estTime: "45 mins",
-    color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
   },
   {
     id: "uber",
     title: "Uber Ride Hailing",
     desc: "Design a high-throughput geospatial matching broker to match riders with nearby drivers under 2 seconds.",
-    icon: Car,
     difficulty: "hard",
     estTime: "45 mins",
-    color: "text-sky-500 bg-sky-500/10 border-sky-500/20",
   },
   {
     id: "netflix",
     title: "Netflix Video Streaming",
     desc: "Design a global content delivery network (CDN) and adaptive video transcoding pipeline for multi-bitrate playbacks.",
-    icon: Video,
     difficulty: "medium",
     estTime: "40 mins",
-    color: "text-rose-500 bg-rose-500/10 border-rose-500/20",
   },
   {
     id: "distributed-cache",
     title: "Distributed Cache",
     desc: "Design a distributed caching layer like Redis Cluster with consistent hashing, cache eviction policies, and replication.",
-    icon: Network,
     difficulty: "easy",
     estTime: "30 mins",
-    color: "text-violet-500 bg-violet-500/10 border-violet-500/20",
   },
 ];
 
@@ -69,9 +59,9 @@ const difficultyLabel: Record<DifficultyKey, string> = {
 };
 
 const difficultyBadge: Record<DifficultyKey, string> = {
-  easy: "text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800",
-  medium: "text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800",
-  hard: "text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800",
+  easy: "text-teal-600 dark:text-teal-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50",
+  medium: "text-amber-600 dark:text-amber-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50",
+  hard: "text-rose-600 dark:text-rose-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50",
 };
 
 function normalizeDifficulty(raw: string): DifficultyKey {
@@ -81,14 +71,7 @@ function normalizeDifficulty(raw: string): DifficultyKey {
   return "hard";
 }
 
-function questionToTopicCard(q: Question, index: number): TopicCard {
-  const icons = [MessageSquare, Car, Video, Network];
-  const colors = [
-    "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
-    "text-sky-500 bg-sky-500/10 border-sky-500/20",
-    "text-rose-500 bg-rose-500/10 border-rose-500/20",
-    "text-violet-500 bg-violet-500/10 border-violet-500/20",
-  ];
+function questionToTopicCard(q: Question): TopicCard {
   const difficulty = normalizeDifficulty(q.difficulty);
 
   return {
@@ -98,10 +81,8 @@ function questionToTopicCard(q: Question, index: number): TopicCard {
     desc: q.expected_topics?.length
       ? `Focus areas: ${q.expected_topics.slice(0, 4).join(", ")}`
       : "System design interview scenario from the Archon question bank.",
-    icon: icons[index % icons.length],
     difficulty,
     estTime: `${q.time_limit_minutes} mins`,
-    color: colors[index % colors.length],
     expectedTopics: q.expected_topics,
   };
 }
@@ -182,7 +163,7 @@ export default function InterviewsPage() {
   return (
     <div className="p-6 lg:p-8 space-y-8 animate-in fade-in duration-205">
       <div>
-        <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-50">Interviews</h1>
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">Interviews</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
           Select a distributed systems problem to enter the interactive design whiteboard workspace.
           {isLoadingQuestions && (
@@ -195,28 +176,22 @@ export default function InterviewsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {topics.map((topic) => {
-          const Icon = topic.icon;
           const isLoading = startingId === topic.id;
           return (
             <div
               key={topic.id}
-              className="flex flex-col justify-between p-6 bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-primary/55 group transition-all"
+              className="flex flex-col justify-between p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl hover:border-zinc-300 dark:hover:border-zinc-700 group transition-all"
             >
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className={`p-2 rounded-lg border ${topic.color}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex gap-1.5">
-                    <span
-                      className={`px-2 py-0.5 border text-3xs font-bold rounded-md ${difficultyBadge[topic.difficulty]}`}
-                    >
-                      {difficultyLabel[topic.difficulty]}
-                    </span>
-                    <span className="px-2 py-0.5 border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-3xs font-bold rounded-md text-zinc-400">
-                      {topic.estTime}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-3 py-0.5 text-xs font-medium rounded-full ${difficultyBadge[topic.difficulty]}`}
+                  >
+                    {difficultyLabel[topic.difficulty]}
+                  </span>
+                  <span className="px-3 py-0.5 border border-zinc-200/50 dark:border-zinc-700/50 bg-zinc-100 dark:bg-zinc-800 text-xs font-medium rounded-full text-zinc-600 dark:text-zinc-400">
+                    {topic.estTime}
+                  </span>
                 </div>
 
                 <div>
@@ -252,7 +227,7 @@ export default function InterviewsPage() {
 
       <div className="p-6 bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-xl max-w-2xl space-y-4">
         <div>
-          <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400">Custom Scenario</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Scenario</h2>
           <p className="text-xs text-zinc-450 dark:text-zinc-500 mt-0.5">
             Define your own architecture scenario and start practicing immediately.
           </p>

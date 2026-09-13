@@ -41,10 +41,10 @@ export function QuizDeckCards({ decks, onStartDeck }: QuizDeckCardsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {decks.map((deck) => {
           const Icon = getDeckIcon(deck.iconName);
-          const diffBadge =
+          const diffColor =
             deck.difficulty === "senior"
-              ? "text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-800"
-              : "text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800";
+              ? "text-rose-600 dark:text-rose-400"
+              : "text-amber-600 dark:text-amber-400";
 
           return (
             <div
@@ -57,10 +57,10 @@ export function QuizDeckCards({ decks, onStartDeck }: QuizDeckCardsProps) {
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border ${diffBadge}`}>
+                    <span className={`px-2.5 py-0.5 text-xs font-medium uppercase rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 ${diffColor}`}>
                       {deck.difficulty}
                     </span>
-                    <span className="px-2 py-0.5 text-[10px] font-mono text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-900">
+                    <span className="px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 border border-zinc-200/50 dark:border-zinc-700/50 rounded-full bg-zinc-100 dark:bg-zinc-800">
                       {deck.estMinutes} mins
                     </span>
                   </div>

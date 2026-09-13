@@ -18,7 +18,7 @@ export function AnalyticsView() {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             System Design Analytics &amp; Telemetry
           </h1>
           {isLoading && (

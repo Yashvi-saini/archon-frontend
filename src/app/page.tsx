@@ -110,7 +110,7 @@ export default function Home() {
       {/* Main Hero Section (H1 split into "Archon" on top line, and "Think like an architect." on the line below) */}
       <main className="relative z-20 flex-1 flex flex-col items-center justify-center text-center px-6 max-w-4xl mx-auto py-24 sm:py-36 animate-in fade-in duration-500">
         <h1 className="flex flex-col gap-4 tracking-tight leading-none">
-          <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold text-zinc-900 dark:text-zinc-50">
+          <span className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-zinc-900 dark:text-zinc-50">
             Archon
           </span>
           <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-zinc-500 dark:text-zinc-400">
@@ -142,7 +142,7 @@ export default function Home() {
       <section className="relative z-20 max-w-7xl mx-auto px-6 py-20 w-full">
         <div className="text-center md:text-left md:flex md:items-end md:justify-between mb-16">
           <div className="max-w-xl">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
               Engineered for software architects.
             </h2>
           </div>
@@ -202,7 +202,7 @@ export default function Home() {
       {/* How It Works Section - Step cards set to soft zinc-100/50 backgrounds */}
       <section className="relative z-20 max-w-7xl mx-auto px-6 py-20 w-full bg-zinc-100/20 dark:bg-zinc-900/10">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
             How Archon prepares you.
           </h2>
         </div>
@@ -210,7 +210,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
           {/* Step 1 */}
           <div className="flex flex-col gap-4 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-xs">
-            <span className="text-5xl font-extrabold text-zinc-200 dark:text-zinc-800 tracking-tight leading-none font-mono">
+            <span className="text-5xl font-bold text-zinc-200 dark:text-zinc-800 tracking-tight leading-none font-mono">
               01
             </span>
             <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
@@ -223,7 +223,7 @@ export default function Home() {
 
           {/* Step 2 */}
           <div className="flex flex-col gap-4 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-xs">
-            <span className="text-5xl font-extrabold text-zinc-200 dark:text-zinc-800 tracking-tight leading-none font-mono">
+            <span className="text-5xl font-bold text-zinc-200 dark:text-zinc-800 tracking-tight leading-none font-mono">
               02
             </span>
             <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
@@ -236,7 +236,7 @@ export default function Home() {
 
           {/* Step 3 */}
           <div className="flex flex-col gap-4 bg-zinc-100/50 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800 p-6 rounded-xl shadow-xs">
-            <span className="text-5xl font-extrabold text-zinc-200 dark:text-zinc-800 tracking-tight leading-none font-mono">
+            <span className="text-5xl font-bold text-zinc-200 dark:text-zinc-800 tracking-tight leading-none font-mono">
               03
             </span>
             <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
@@ -252,7 +252,7 @@ export default function Home() {
       {/* Confidence Callout Section - Practice primary button styled with Project Purple theme color: #BA68C8 */}
       <section className="relative z-20 max-w-5xl mx-auto px-6 py-20 w-full text-center">
         <div className="border border-zinc-200 dark:border-zinc-800 bg-zinc-100/60 dark:bg-zinc-900/20 backdrop-blur-md p-10 sm:p-16 rounded-2xl flex flex-col items-center gap-6 shadow-sm">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight max-w-2xl leading-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight max-w-2xl leading-tight">
             Not confident about your prep? Want to practice? We got you.
           </h2>
           <p className="text-xs sm:text-sm text-zinc-505 dark:text-zinc-450 max-w-xl leading-relaxed">
@@ -279,7 +279,7 @@ export default function Home() {
       <section className="relative z-20 max-w-7xl mx-auto px-6 py-20 w-full">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">
               Tailored pathways for every level.
             </h2>
             <p className="text-sm text-zinc-550 dark:text-zinc-400 mt-4 leading-relaxed">
@@ -307,19 +307,19 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex justify-between items-center pb-3 border-b border-zinc-200/50 dark:border-zinc-800/50">
                 <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Rate Limiter System</span>
-                <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold">COMPLETED</span>
+                <span className="text-[10px] font-mono text-teal-600 dark:text-teal-400 font-medium px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50">COMPLETED</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-zinc-200/50 dark:border-zinc-800/50">
                 <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Global Notification Engine</span>
-                <span className="text-[10px] font-mono text-[#BA68C8] font-bold">ACTIVE</span>
+                <span className="text-[10px] font-mono text-primary font-medium px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50">ACTIVE</span>
               </div>
               <div className="flex justify-between items-center pb-3 border-b border-zinc-200/50 dark:border-zinc-800/50">
                 <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Distributed Web Crawler</span>
-                <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold">LOCKED</span>
+                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 font-medium px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50">LOCKED</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Realtime Analytics Pipeline</span>
-                <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 font-semibold">LOCKED</span>
+                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 font-medium px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50">LOCKED</span>
               </div>
             </div>
             <Link
@@ -334,7 +334,7 @@ export default function Home() {
 
       {/* Bottom CTA Banner */}
       <section className="relative z-20 max-w-5xl mx-auto px-6 py-24 text-center w-full flex flex-col items-center gap-6">
-        <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight max-w-lg">
+        <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight max-w-lg">
           Ready to design at enterprise scale?
         </h2>
         <p className="text-sm text-zinc-550 dark:text-zinc-450 max-w-md leading-relaxed">

@@ -29,7 +29,7 @@ export function FeedbackTimeline({
           {strengths.map((s, idx) => (
             <li
               key={idx}
-              className="text-xs text-zinc-700 dark:text-zinc-300 flex items-start gap-2 bg-emerald-50/40 dark:bg-emerald-950/20 p-2.5 rounded-lg border border-emerald-200/40 dark:border-emerald-900/30"
+              className="text-xs text-zinc-700 dark:text-zinc-300 flex items-start gap-2 bg-emerald-50/50 dark:bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-200/50 dark:border-emerald-500/20"
             >
               <span className="text-emerald-500 font-bold">•</span>
               <span>{s}</span>
@@ -49,7 +49,7 @@ export function FeedbackTimeline({
           {weaknesses.map((w, idx) => (
             <li
               key={idx}
-              className="text-xs text-zinc-700 dark:text-zinc-300 flex items-start gap-2 bg-amber-50/40 dark:bg-amber-950/20 p-2.5 rounded-lg border border-amber-200/40 dark:border-amber-900/30"
+              className="text-xs text-zinc-700 dark:text-zinc-300 flex items-start gap-2 bg-amber-50/50 dark:bg-amber-500/10 p-2.5 rounded-lg border border-amber-200/50 dark:border-amber-500/20"
             >
               <span className="text-amber-500 font-bold">•</span>
               <span>{w}</span>
@@ -90,7 +90,7 @@ export function FeedbackTimeline({
             {diagramComponents.map((comp) => (
               <span
                 key={comp}
-                className="px-2.5 py-1 text-xs font-mono rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700"
+                className="px-2.5 py-0.5 text-xs font-mono rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-700/50"
               >
                 {comp}
               </span>

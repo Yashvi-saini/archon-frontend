@@ -119,7 +119,7 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-xs font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800/80 px-2.5 py-1 rounded-md">
+            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
               <Clock className="h-3.5 w-3.5 text-zinc-400" />
               <span>{formatTime(elapsedSeconds)}</span>
             </div>
@@ -141,7 +141,7 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
 
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-400">
+            <span className="text-[10px] font-medium uppercase px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-600 dark:text-zinc-400">
               {currentQuestion.topicTag}
             </span>
           </div>
@@ -168,10 +168,10 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
             if (showExplanation) {
               if (opt.isCorrect) {
                 style =
-                  "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-semibold";
+                  "border-emerald-500/50 bg-emerald-50/70 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold";
               } else if (isSelected && !opt.isCorrect) {
                 style =
-                  "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300";
+                  "border-rose-500/50 bg-rose-50/70 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300";
               }
             }
 

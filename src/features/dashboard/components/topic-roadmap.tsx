@@ -13,7 +13,7 @@ export function TopicRoadmapCard({ topics }: TopicRoadmapProps) {
     <div className="p-7 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl shadow-xs space-y-5 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-50">
+          <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
             System Design Syllabus Roadmap
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
@@ -31,10 +31,10 @@ export function TopicRoadmapCard({ topics }: TopicRoadmapProps) {
               className="p-5 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/40 space-y-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                <span className="px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider rounded-full bg-zinc-100 dark:bg-zinc-800 text-primary border border-zinc-200/50 dark:border-zinc-700/50">
                   {t.category}
                 </span>
-                <span className="text-xs font-mono text-zinc-400">
+                <span className="text-xs font-medium text-zinc-400">
                   {t.completedLessons}/{t.totalLessons} modules
                 </span>
               </div>

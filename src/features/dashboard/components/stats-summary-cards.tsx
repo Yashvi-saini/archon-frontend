@@ -24,16 +24,28 @@ export function StatsSummaryCards({ stats }: StatsSummaryCardsProps) {
         </div>
         <div className="flex items-baseline justify-between">
           <div>
-            <span className="text-3xl lg:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <span className="text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {stats.readinessScore}
             </span>
             <span className="text-sm text-zinc-400 font-semibold"> / 100</span>
           </div>
           <Sparkline data={stats.scoreHistory} />
         </div>
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-          <ArrowUpRight className="h-4 w-4" />
-          <span>+{stats.readinessChange}% this month</span>
+        <div className="flex items-center gap-1.5 text-xs font-semibold">
+          {stats.readinessChange > 0 ? (
+            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+              <ArrowUpRight className="h-4 w-4" />
+              <span>+{stats.readinessChange}% this month</span>
+            </span>
+          ) : stats.readinessChange < 0 ? (
+            <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+              <span>{stats.readinessChange}% this month</span>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-zinc-400 dark:text-zinc-500 font-normal">
+              <span>Baseline calibration</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -48,7 +60,7 @@ export function StatsSummaryCards({ stats }: StatsSummaryCardsProps) {
           </div>
         </div>
         <div>
-          <span className="text-3xl lg:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+          <span className="text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {stats.completedInterviews}
           </span>
           <span className="text-sm text-zinc-400 font-medium ml-2">sessions</span>
@@ -70,7 +82,7 @@ export function StatsSummaryCards({ stats }: StatsSummaryCardsProps) {
         </div>
         <div className="flex items-baseline justify-between">
           <div>
-            <span className="text-3xl lg:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <span className="text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {stats.quizAccuracy}%
             </span>
             <span className="text-sm text-zinc-400 font-medium ml-2">accuracy</span>
@@ -98,7 +110,7 @@ export function StatsSummaryCards({ stats }: StatsSummaryCardsProps) {
           </div>
         </div>
         <div>
-          <span className="text-3xl lg:text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+          <span className="text-3xl lg:text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {stats.streakDays}
           </span>
           <span className="text-sm text-zinc-400 font-medium ml-2">consecutive days</span>

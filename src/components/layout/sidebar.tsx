@@ -80,7 +80,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
               />
             </div>
             {!isCollapsed && (
-              <span className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50 transition-opacity duration-200">
+              <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 transition-opacity duration-200">
                 Archon
               </span>
             )}
@@ -146,7 +146,7 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
           <div className={`flex items-center rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 ${
             isCollapsed ? "justify-center p-2" : "gap-3 p-2.5"
           }`}>
-            <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs border border-primary/20 flex-shrink-0">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20 flex-shrink-0">
               {initials}
             </div>
             {!isCollapsed && (

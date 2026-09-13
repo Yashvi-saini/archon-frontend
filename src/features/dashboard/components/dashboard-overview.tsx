@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Plus, Sparkles, Loader2, RefreshCw, LayoutDashboard } from "lucide-react";
+import { Plus, HelpCircle, Loader2, RefreshCw, LayoutDashboard } from "lucide-react";
 import { StatsSummaryCards } from "./stats-summary-cards";
 import { RecommendedScenarioHero } from "./recommended-scenario-hero";
 import { CompetencyRadarCard } from "./competency-radar";
@@ -17,10 +17,11 @@ export function DashboardOverview() {
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
       <div>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Architecture Dashboard
           </h1>
-          <span className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-700/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
             Active Candidate
           </span>
           {isLoading && (
@@ -37,7 +38,7 @@ export function DashboardOverview() {
           href="/quiz"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#111318] text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all shadow-xs hover:shadow-sm"
         >
-          <Sparkles className="h-4 w-4 text-primary" /> Quick Quiz
+          <HelpCircle className="h-4 w-4 text-zinc-500 dark:text-zinc-400" /> Quick Quiz
         </Link>
         <Link
           href="/interviews"
@@ -85,7 +86,7 @@ export function DashboardOverview() {
       <div className="max-w-[1550px] mx-auto w-full p-6 lg:p-8 xl:p-10 space-y-8 animate-in fade-in duration-200">
         {header}
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-          <div className="p-3 bg-rose-50 dark:bg-rose-950/30 rounded-full">
+          <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-500/20 rounded-full">
             <RefreshCw className="h-6 w-6 text-rose-500" />
           </div>
           <div>

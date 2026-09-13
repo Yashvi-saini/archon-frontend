@@ -22,7 +22,7 @@ import {
   Code2,
   Check,
   Copy,
-  Sparkles,
+  Bot,
   UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -195,10 +195,10 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
           <button
             type="button"
             onClick={() => setShowJsonModal(true)}
-            className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 px-2 py-0.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 transition-colors cursor-pointer"
             title="Inspect detected whiteboard components JSON"
           >
-            <Code2 className="h-3.5 w-3.5 text-emerald-500" />
+            <Code2 className="h-3.5 w-3.5 text-teal-500" />
             <span>
               {architectureSummary?.totalComponents ?? 0} components detected
             </span>
@@ -210,7 +210,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
               type="button"
               onClick={onSyncAllNodes}
               disabled={wsStatus !== "open"}
-              className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1 text-[10px] font-medium text-teal-600 dark:text-teal-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/60 border border-zinc-200/50 dark:border-zinc-700/50 px-2.5 py-0.5 rounded-full transition-colors cursor-pointer disabled:opacity-50"
               title="Send all components on canvas to backend"
             >
               <UploadCloud className="h-3 w-3" />
@@ -222,10 +222,10 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
             <button
               type="button"
               onClick={() => onSendArchitectureToAi(architectureSummary)}
-              className="flex items-center gap-1 text-[10px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-[10px] font-medium text-primary bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/60 border border-zinc-200/50 dark:border-zinc-700/50 px-2.5 py-0.5 rounded-full transition-colors cursor-pointer"
               title="Evaluate this architecture with AI Interviewer"
             >
-              <Sparkles className="h-3 w-3" />
+              <Bot className="h-3 w-3" />
               <span>Ask AI Review</span>
             </button>
           )}
@@ -369,7 +369,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
                     }}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors cursor-pointer"
                   >
-                    <Sparkles className="h-3.5 w-3.5" />
+                    <Bot className="h-3.5 w-3.5" />
                     <span>Send to AI Interviewer</span>
                   </button>
                 )}

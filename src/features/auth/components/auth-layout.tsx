@@ -29,7 +29,7 @@ export function AuthLayout({
         
         {/* Content & Illustration */}
         <div className="flex flex-col items-center justify-center max-w-md mx-auto text-center gap-6 py-4 z-10">
-          <h2 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight">
+          <h2 className="text-2xl xl:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-tight">
             {title}
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400 text-sm max-w-xs">

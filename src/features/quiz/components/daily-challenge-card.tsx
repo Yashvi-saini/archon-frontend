@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, CheckCircle2, XCircle, HelpCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, HelpCircle, Loader2 } from "lucide-react";
 import type { QuizQuestion, VerifyDailyChallengeResponse } from "../types";
 import { useVerifyDailyChallenge } from "../hooks/use-quiz";
 import { toast } from "sonner";
@@ -47,10 +47,10 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
     <div className="p-6 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl shadow-xs space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            <Sparkles className="h-3 w-3" /> Daily Architecture Brain-Teaser
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-700/50">
+            Daily Architecture Challenge
           </span>
-          <span className="text-xs font-mono uppercase px-2 py-0.2 rounded border border-zinc-200 dark:border-zinc-800 text-zinc-400">
+          <span className="text-xs uppercase px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 font-medium">
             {question.topicTag}
           </span>
         </div>
@@ -83,10 +83,10 @@ export function DailyChallengeCard({ question }: DailyChallengeCardProps) {
           if (isSubmitted) {
             if (opt.id === verificationResult.correctOptionId) {
               optStyle =
-                "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 font-semibold";
+                "border-emerald-500/50 bg-emerald-50/70 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold";
             } else if (isSelected && !verificationResult.isCorrect) {
               optStyle =
-                "border-rose-500 bg-rose-50/50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-300";
+                "border-rose-500/50 bg-rose-50/70 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300";
             }
           }
 

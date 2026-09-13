@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
 import type { RecommendedScenario } from "../types";
 
 interface RecommendedScenarioHeroProps {
@@ -16,20 +16,21 @@ export function RecommendedScenarioHero({ scenario }: RecommendedScenarioHeroPro
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
         <div className="space-y-4 max-w-2xl">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-              <Sparkles className="h-3.5 w-3.5" /> Recommended Next Mock
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+              Recommended Mock
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-              <Clock className="h-3.5 w-3.5" /> {scenario.estTime}
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200/50 dark:border-zinc-700/50">
+              <Clock className="h-3 w-3 text-zinc-400" /> {scenario.estTime}
             </span>
-            <span className="px-2.5 py-1 text-xs font-bold uppercase rounded-md border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
+            <span className="px-3 py-1 text-xs font-medium uppercase tracking-wide rounded-full bg-zinc-100 dark:bg-zinc-800 text-rose-600 dark:text-rose-400 border border-zinc-200/50 dark:border-zinc-700/50">
               {scenario.difficulty}
             </span>
           </div>
 
           <div>
-            <h2 className="text-xl lg:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {scenario.title}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
@@ -41,7 +42,7 @@ export function RecommendedScenarioHero({ scenario }: RecommendedScenarioHeroPro
             {scenario.topics.map((topic) => (
               <span
                 key={topic}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200/80 dark:border-zinc-800/80"
+                className="px-3 py-0.5 text-xs font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200/50 dark:border-zinc-700/50"
               >
                 {topic}
               </span>
