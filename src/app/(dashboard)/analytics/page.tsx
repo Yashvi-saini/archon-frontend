@@ -1,7 +1,7 @@
 import { AnalyticsView } from "@/features/analytics";
 
 export const metadata = {
-  title: "Analytics | Archon",
+  title: "Analytics",
   description: "System Design Performance Telemetry & Skill Matrix",
 };
 

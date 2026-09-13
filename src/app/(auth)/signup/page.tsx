@@ -1,7 +1,7 @@
 import { AuthLayout, SignupForm } from "@/features/auth";
 
 export const metadata = {
-  title: "Register | Archon",
+  title: "Register",
   description: "Create an Archon account to practice system design interviews.",
 };
 

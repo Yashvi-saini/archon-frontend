@@ -105,10 +105,10 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 relative">
-        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4">
+      <div className="bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in zoom-in-95 duration-200 relative">
+        <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-3.5">
           <div className="space-y-0.5">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-primary font-bold">
+            <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 block truncate max-w-[260px]">
               {deck.title}
             </span>
             <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
+            <div className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
               <Clock className="h-3.5 w-3.5 text-zinc-400" />
               <span>{formatTime(elapsedSeconds)}</span>
             </div>
@@ -132,24 +132,24 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
           </div>
         </div>
 
-        <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
+        <div className="w-full bg-zinc-100 dark:bg-zinc-800/80 h-1.5 rounded-full overflow-hidden">
           <div
-            className="h-full bg-primary transition-all duration-300"
+            className="h-full bg-linear-to-r from-primary to-violet-500 transition-all duration-300 rounded-full"
             style={{ width: `${((currentIdx + 1) / totalQuestions) * 100}%` }}
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium uppercase px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-600 dark:text-zinc-400">
+            <span className="px-2.5 py-0.5 text-xs font-medium capitalize rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50 text-zinc-600 dark:text-zinc-300">
               {currentQuestion.topicTag}
             </span>
           </div>
-          <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50 leading-relaxed">
+          <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-50 leading-snug">
             {currentQuestion.question}
           </h3>
           {currentQuestion.scenario && (
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-200/60 dark:border-zinc-800/80 font-mono text-[11px] leading-relaxed">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/40 p-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800/80 leading-relaxed font-normal">
               {currentQuestion.scenario}
             </p>
           )}
@@ -158,51 +158,75 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
         <div className="space-y-2.5">
           {currentQuestion.options.map((opt) => {
             const isSelected = currentSelectedOptId === opt.id;
-            let style =
+            const isCorrect = showExplanation && opt.isCorrect;
+            const isWrongSelection = showExplanation && isSelected && !opt.isCorrect;
+
+            let cardStyle =
               "border-zinc-200 dark:border-zinc-800 hover:border-primary/50 bg-white dark:bg-zinc-900/30 text-zinc-700 dark:text-zinc-300";
 
-            if (isSelected) {
-              style = "border-primary bg-primary/5 text-zinc-900 dark:text-zinc-50";
+            if (isSelected && !showExplanation) {
+              cardStyle = "border-primary bg-white dark:bg-zinc-900/30 text-zinc-900 dark:text-zinc-50";
             }
 
-            if (showExplanation) {
-              if (opt.isCorrect) {
-                style =
-                  "border-emerald-500/50 bg-emerald-50/70 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 font-semibold";
-              } else if (isSelected && !opt.isCorrect) {
-                style =
-                  "border-rose-500/50 bg-rose-50/70 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300";
-              }
+            if (isCorrect) {
+              cardStyle = "border-emerald-500/60 bg-white dark:bg-zinc-900/30 text-zinc-900 dark:text-zinc-100 shadow-xs";
+            } else if (isWrongSelection) {
+              cardStyle = "border-rose-500/60 bg-white dark:bg-zinc-900/30 text-zinc-900 dark:text-zinc-100 shadow-xs";
+            } else if (showExplanation) {
+              cardStyle = "border-zinc-200/50 dark:border-zinc-800/50 bg-transparent text-zinc-400 dark:text-zinc-500 opacity-60";
             }
 
             return (
               <div
                 key={opt.id}
                 onClick={() => handleSelectOption(opt.id)}
-                className={`p-3.5 rounded-lg border text-xs transition-all flex items-start gap-3 cursor-pointer ${style}`}
+                className={`p-3.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-3 cursor-pointer ${cardStyle}`}
               >
-                <div className="mt-0.5 shrink-0">
-                  {showExplanation ? (
-                    opt.isCorrect ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    ) : isSelected ? (
-                      <XCircle className="h-4 w-4 text-rose-500" />
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="shrink-0">
+                    {showExplanation ? (
+                      isCorrect ? (
+                        <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
+                      ) : isWrongSelection ? (
+                        <XCircle className="h-4.5 w-4.5 text-rose-500" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700" />
+                      )
                     ) : (
-                      <div className="w-4 h-4 rounded-full border border-zinc-300 dark:border-zinc-700" />
-                    )
-                  ) : (
-                    <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        isSelected
-                          ? "border-primary bg-primary text-white"
-                          : "border-zinc-300 dark:border-zinc-700"
-                      }`}
-                    >
-                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                  )}
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          isSelected
+                            ? "border-primary bg-primary text-white"
+                            : "border-zinc-300 dark:border-zinc-700"
+                        }`}
+                      >
+                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="leading-relaxed font-medium">
+                    {opt.text}
+                  </span>
                 </div>
-                <span className="flex-1 leading-relaxed">{opt.text}</span>
+
+                {/* LeetCode Styled Correct / Incorrect Answer Pills (no colored background) */}
+                {showExplanation && (
+                  <div className="shrink-0 pl-2">
+                    {isCorrect && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 text-emerald-600 dark:text-emerald-400 shadow-xs">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                        Correct Answer
+                      </span>
+                    )}
+                    {isWrongSelection && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-zinc-700/60 text-rose-600 dark:text-rose-400 shadow-xs">
+                        <XCircle className="h-3 w-3 text-rose-500" />
+                        Incorrect
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -231,7 +255,7 @@ export function QuizRunnerModal({ deck, onClose }: QuizRunnerModalProps) {
             <button
               onClick={handleVerify}
               disabled={!currentSelectedOptId}
-              className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-primary dark:hover:bg-primary/90 text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-xs hover:shadow-md"
             >
               Verify Answer
             </button>

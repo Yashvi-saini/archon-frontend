@@ -1,7 +1,7 @@
 import { DashboardOverview } from "@/features/dashboard";
 
 export const metadata = {
-  title: "Dashboard | Archon",
+  title: "Dashboard",
   description: "System Design Interview Prep Architecture Overview",
 };
 

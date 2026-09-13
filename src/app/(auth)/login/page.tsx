@@ -2,7 +2,7 @@ import { AuthLayout, LoginForm } from "@/features/auth";
 import { Suspense } from "react";
 
 export const metadata = {
-  title: "Login | Archon",
+  title: "Login",
   description: "Sign in to your Archon interview workspace.",
 };
 

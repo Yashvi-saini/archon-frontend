@@ -207,7 +207,7 @@ export default function InterviewsPage() {
               <button
                 onClick={() => handleStartPractice(topic)}
                 disabled={!!startingId}
-                className="w-full mt-6 inline-flex items-center justify-center gap-1.5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-100 dark:text-zinc-900 font-bold text-xs rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full mt-6 inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-900 hover:text-white dark:hover:bg-primary dark:hover:text-white text-zinc-800 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-xs rounded-xl transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-xs hover:shadow-md hover:border-transparent"
               >
                 {isLoading ? (
                   <>
@@ -244,7 +244,7 @@ export default function InterviewsPage() {
           <button
             type="submit"
             disabled={!!startingId}
-            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-100 dark:text-zinc-900 font-bold text-xs rounded-lg transition-colors cursor-pointer flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+            className="px-5 py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-primary dark:hover:bg-primary/90 text-white font-semibold text-xs rounded-xl transition-all cursor-pointer flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5 shadow-xs hover:shadow-md"
           >
             {startingId === "custom" ? (
               <>

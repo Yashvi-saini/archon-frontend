@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import { DailyChallengeCard } from "./daily-challenge-card";
+import { DailyStreakCalendar } from "./daily-streak-calendar";
 import { QuizDeckCards } from "./quiz-deck-cards";
 import { QuizRunnerModal } from "./quiz-runner-modal";
 import type { QuizDeck } from "../types";
-import { Award, Flame, Loader2, RefreshCw, BookOpen } from "lucide-react";
+import { Award, Flame, Loader2, RefreshCw, BookOpen, Coins } from "lucide-react";
 import { useDailyChallenge, useQuizDecks } from "../hooks/use-quiz";
+import { useQuizRewards } from "../hooks/use-quiz-rewards";
 import Link from "next/link";
 
 export function QuizHub() {
@@ -14,6 +16,7 @@ export function QuizHub() {
 
   const { data: dailyData, isLoading: isDailyLoading, isError: isDailyError, refetch: refetchDaily } = useDailyChallenge();
   const { data: decksData, isLoading: isDecksLoading } = useQuizDecks();
+  const { rewards } = useQuizRewards();
 
   const decks = decksData ?? [];
 
@@ -41,30 +44,39 @@ export function QuizHub() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {totalMastery > 0 && (
-            <>
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 text-sm shadow-xs">
-                <Flame className="h-4.5 w-4.5 text-amber-500" />
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">{decks.length} Decks</span>
-                <span className="text-zinc-400 text-xs">Available</span>
-              </div>
+        {/* LeetCode Style Header Pills: Streak, Coins & Mastery */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Daily Streak */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 text-xs shadow-xs">
+            <Flame className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{rewards.streakDays}</span>
+            <span className="text-zinc-400 text-[11px]">{rewards.streakDays === 1 ? "Day Streak" : "Days Streak"}</span>
+          </div>
 
-              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 text-sm shadow-xs">
-                <Award className="h-4.5 w-4.5 text-primary" />
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">{totalMastery}%</span>
-                <span className="text-zinc-400 text-xs">Mastery</span>
-              </div>
-            </>
-          )}
+          {/* Archon Coins */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 text-xs shadow-xs">
+            <Coins className="h-4 w-4 text-amber-400 shrink-0" />
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{rewards.coins}</span>
+            <span className="text-zinc-400 text-[11px]">Coins</span>
+          </div>
+
+          {/* Total Mastery */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 text-xs shadow-xs">
+            <Award className="h-4 w-4 text-primary shrink-0" />
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{totalMastery}%</span>
+            <span className="text-zinc-400 text-[11px]">Mastery</span>
+          </div>
         </div>
       </div>
 
-      {/* Daily Challenge */}
+      {/* Daily Challenge & Activity Calendar */}
       {isDailyLoading ? (
-        <div className="h-48 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="lg:col-span-7 xl:col-span-8 h-80 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
+          <div className="lg:col-span-5 xl:col-span-4 h-80 bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl animate-pulse" />
+        </div>
       ) : isDailyError ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-10 text-center bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl">
+        <div className="flex flex-col items-center justify-center gap-3 py-10 text-center bg-white dark:bg-[#111318] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl">
           <p className="text-xs text-zinc-500">Could not load today&apos;s challenge</p>
           <button
             onClick={() => refetchDaily()}
@@ -74,7 +86,14 @@ export function QuizHub() {
           </button>
         </div>
       ) : dailyData ? (
-        <DailyChallengeCard question={dailyData} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-8">
+            <DailyChallengeCard question={dailyData} />
+          </div>
+          <div className="lg:col-span-4 flex justify-center lg:justify-end">
+            <DailyStreakCalendar />
+          </div>
+        </div>
       ) : null}
 
       {/* Deck Cards */}

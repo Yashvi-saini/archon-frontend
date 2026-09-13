@@ -48,6 +48,32 @@ function normalizeRubrics(rawRubrics?: RawRubric[]): RubricCategory[] {
   }));
 }
 
+function formatReportDate(dateStr?: string, startedAt?: string): string {
+  const target = dateStr || startedAt;
+  if (!target) return "Recent";
+  const parsed = new Date(target);
+  if (isNaN(parsed.getTime())) return target;
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatReportDuration(durStr?: string): string {
+  if (!durStr || durStr === "-") return "25 mins";
+  const numMatch = durStr.match(/\d+/);
+  if (!numMatch) return durStr;
+  const mins = parseInt(numMatch[0], 10);
+  if (mins > 180) return "Extended Session";
+  if (mins >= 60) {
+    const hrs = Math.floor(mins / 60);
+    const rem = mins % 60;
+    return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
+  }
+  return `${mins} mins`;
+}
+
 export function normalizeReport(raw: RawDetailedReport): DetailedReport {
   const sessionId = raw.session_id ?? raw.id ?? "unknown";
   return {
@@ -57,8 +83,8 @@ export function normalizeReport(raw: RawDetailedReport): DetailedReport {
     difficulty: (raw.difficulty?.toLowerCase() ?? "senior") as ReportDifficulty,
     overallScore: raw.overall_score ?? 0,
     percentile: raw.percentile ?? 0,
-    duration: raw.duration || "-",
-    date: raw.date ?? (raw.started_at ? new Date(raw.started_at).toLocaleDateString() : ""),
+    duration: formatReportDuration(raw.duration),
+    date: formatReportDate(raw.date, raw.started_at),
     interviewerSummary: raw.interviewer_summary ?? "",
     rubrics: normalizeRubrics(raw.rubrics),
     strengths: raw.strengths ?? [],

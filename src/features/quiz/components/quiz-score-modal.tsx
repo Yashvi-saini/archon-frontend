@@ -33,7 +33,7 @@ export function QuizScoreModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-xl w-full p-6 sm:p-8 space-y-6 shadow-xl animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-[#111318] border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-xl animate-in zoom-in-95 duration-200">
         <div className="text-center space-y-4">
           <div className="flex justify-center">
             <RadialScoreGauge
@@ -105,7 +105,7 @@ export function QuizScoreModal({
 
           <button
             onClick={onExit}
-            className="px-5 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+            className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-primary dark:hover:bg-primary/90 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs hover:shadow-md"
           >
             Done & Return to Hub
           </button>

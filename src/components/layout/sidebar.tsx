@@ -4,7 +4,19 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogOut, LayoutDashboard, Network, Terminal, Activity, Layers, Settings, X, Menu,ChevronRight,ChevronLeft,Sliders} from "lucide-react";
+import { 
+  LogOut, 
+  LayoutDashboard, 
+  User, 
+  FileText, 
+  BarChart3, 
+  Settings, 
+  CheckSquare, 
+  X, 
+  Menu,
+  ChevronRight,
+  ChevronLeft
+} from "lucide-react";
 import { logoutUser } from "@/features/auth/api/auth";
 import { useAuth } from "@/providers/auth-provider";
 import { useUserSettings } from "@/features/settings";
@@ -40,11 +52,11 @@ export function Sidebar({ isOpen, onClose, isCollapsed, onToggleCollapse }: Side
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/interviews", label: "Interviews", icon: Network },
-    { href: "/reports", label: "Reports", icon: Activity },
-    { href: "/analytics", label: "Analytics", icon: Layers },
+    { href: "/interviews", label: "Interviews", icon: User },
+    { href: "/reports", label: "Reports", icon: FileText },
+    { href: "/analytics", label: "Analytics", icon: BarChart3 },
+    { href: "/quiz", label: "Quiz", icon: CheckSquare },
     { href: "/settings", label: "Settings", icon: Settings },
-    { href: "/quiz", label: "Quiz", icon: Sliders },
   ];
 
   return (
