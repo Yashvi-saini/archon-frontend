@@ -536,6 +536,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const submitInterviewMutation = useSubmitInterview();
 
   const handleSubmitDesign = async () => {
+    // Immediately stop any active voice synthesis and microphone recording
+    stopSpeaking();
+    stopListening();
     setIsTimerRunning(false);
     toast.loading("Submitting interview to AI...", { id: "submit-interview" });
     try {
@@ -548,6 +551,21 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
+  // Stop speaking and recording whenever component unmounts or stage completes
+  useEffect(() => {
+    return () => {
+      stopSpeaking();
+      stopListening();
+    };
+  }, [stopSpeaking, stopListening]);
+
+  useEffect(() => {
+    if (interviewStage === "COMPLETED") {
+      stopSpeaking();
+      stopListening();
+    }
+  }, [interviewStage, stopSpeaking, stopListening]);
+
   return (
     <div className="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-[#08090c] text-foreground select-none overflow-hidden">
       <header className="h-14 border-b border-zinc-200 dark:border-zinc-850 bg-white dark:bg-[#0a0c10] flex items-center justify-between px-6 flex-shrink-0 z-40">
@@ -555,6 +573,8 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           <button
             onClick={() => {
               if (confirm("Exit the session? Your whiteboard and chat are saved on the server.")) {
+                stopSpeaking();
+                stopListening();
                 router.push("/interviews");
               }
             }}
