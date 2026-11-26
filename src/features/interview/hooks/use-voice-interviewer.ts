@@ -24,7 +24,17 @@ export interface UseVoiceInterviewerReturn {
 }
 
 function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8071";
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  ) {
+    return "https://archon.monu14.me";
+  }
+  return "http://localhost:8071";
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -233,13 +243,22 @@ export function useVoiceInterviewer({
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         audioChunksRef.current = [];
 
+        if (audioBlob.size < 500) {
+          setIsListening(false);
+          setIsTranscribing(false);
+          setInterimTranscript("");
+          toast.info("Audio was too short. Please speak while the microphone is active.");
+          return;
+        }
+
         setIsTranscribing(true);
         setInterimTranscript("Transcribing audio with Groq Whisper Turbo...");
 
         try {
           const apiBase = getApiBaseUrl();
+          const extension = mimeType.includes("mp4") ? "speech.mp4" : "speech.webm";
           const formData = new FormData();
-          formData.append("file", audioBlob, "speech.webm");
+          formData.append("file", audioBlob, extension);
 
           const res = await fetch(`${apiBase}/api/v1/voice/transcribe`, {
             method: "POST",
@@ -250,7 +269,9 @@ export function useVoiceInterviewer({
           });
 
           if (!res.ok) {
-            throw new Error(`Whisper API error: ${res.statusText}`);
+            const errData = await res.json().catch(() => null);
+            const serverMsg = errData?.error || `Whisper error: ${res.statusText} (${res.status})`;
+            throw new Error(serverMsg);
           }
 
           const data = await res.json();
@@ -264,11 +285,12 @@ export function useVoiceInterviewer({
           } else {
             toast.info("No clear speech detected. Please speak closer to your microphone.");
           }
-        } catch (err) {
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "Speech transcription failed";
           console.error("[useVoiceInterviewer] Backend Whisper transcription error:", err);
           setIsTranscribing(false);
           setInterimTranscript("");
-          toast.error("Speech transcription failed. Please try again or type in chat.");
+          toast.error(message);
         }
       };
 
