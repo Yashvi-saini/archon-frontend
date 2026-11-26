@@ -13,14 +13,52 @@ export interface UseVoiceInterviewerReturn {
   isTranscribing: boolean;
   isSpeaking: boolean;
   isVoiceMuted: boolean;
+  isAutoVoiceEnabled: boolean;
+  currentlySpeakingId: string | null;
   interimTranscript: string;
   isSupported: boolean;
   toggleListening: () => void;
   startListening: () => void;
   stopListening: () => void;
   toggleVoiceMute: () => void;
-  speak: (text: string) => void;
+  toggleAutoVoice: () => void;
+  speak: (text: string, messageId?: string) => Promise<void>;
   stopSpeaking: () => void;
+}
+
+export function cleanTextForSpeech(raw: string): string {
+  if (!raw) return "";
+  let clean = raw
+    .replace(/```[\s\S]*?```/g, " Code block omitted. ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/#+\s+/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^[-*•]\s+/gm, "")
+    .replace(/[–—]/g, "-")
+    .replace(/\n+/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // If text is very long (over 450 chars), take the first 2-3 sentences to keep latency under 600ms
+  if (clean.length > 450) {
+    const sentences = clean.match(/[^.!?]+[.!?]+/g);
+    if (sentences && sentences.length > 0) {
+      let preview = "";
+      for (const s of sentences) {
+        if ((preview + s).length <= 400) {
+          preview += s;
+        } else {
+          break;
+        }
+      }
+      clean = preview.trim() || clean.slice(0, 350) + "...";
+    } else {
+      clean = clean.slice(0, 350) + "...";
+    }
+  }
+  return clean;
 }
 
 function getApiBaseUrl(): string {
@@ -79,6 +117,8 @@ export function useVoiceInterviewer({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+  const [isAutoVoiceEnabled, setIsAutoVoiceEnabled] = useState(true);
+  const [currentlySpeakingId, setCurrentlySpeakingId] = useState<string | null>(null);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isSupported] = useState(true);
 
@@ -86,11 +126,21 @@ export function useVoiceInterviewer({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const ttsAbortControllerRef = useRef<AbortController | null>(null);
   const onTranscriptCompleteRef = useRef(onTranscriptComplete);
 
   useEffect(() => {
     onTranscriptCompleteRef.current = onTranscriptComplete;
   }, [onTranscriptComplete]);
+
+  // Read persisted auto-voice preference
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem("archon_auto_voice");
+    if (stored !== null) {
+      setIsAutoVoiceEnabled(stored === "true");
+    }
+  }, []);
 
   // Initialize Web Audio Context and unlock on first user gesture
   useEffect(() => {
@@ -130,29 +180,54 @@ export function useVoiceInterviewer({
     };
   }, []);
 
-  // Stop any active neural speech playback (Barge-in cancellation)
+  // Stop any active neural speech playback (Guarantees zero overlapping audio)
   const stopSpeaking = useCallback(() => {
+    if (ttsAbortControllerRef.current) {
+      ttsAbortControllerRef.current.abort();
+      ttsAbortControllerRef.current = null;
+    }
+
     if (currentAudioSourceRef.current) {
       try {
         currentAudioSourceRef.current.stop();
+        currentAudioSourceRef.current.disconnect();
       } catch {
         // ignore
       }
       currentAudioSourceRef.current = null;
     }
-    // Also cancel native fallback speech if active
+
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+
     setIsSpeaking(false);
+    setCurrentlySpeakingId(null);
   }, []);
 
-  // Production-grade Neural TTS speech synthesis via Go Backend API (/api/v1/voice/synthesize)
+  // Neural TTS speech synthesis via Go Backend API (/api/v1/voice/synthesize)
   const speak = useCallback(
-    async (text: string) => {
+    async (text: string, messageId?: string) => {
       if (!enabled || isVoiceMuted || !text.trim()) return;
 
+      // If already playing this exact message, clicking again acts as a stop toggle
+      if (currentlySpeakingId && messageId && currentlySpeakingId === messageId && isSpeaking) {
+        stopSpeaking();
+        return;
+      }
+
+      // Stop any existing playing audio immediately
       stopSpeaking();
+
+      const spokenText = cleanTextForSpeech(text);
+      if (!spokenText) return;
+
+      const speechId = messageId || "auto";
+      setCurrentlySpeakingId(speechId);
+      setIsSpeaking(true);
+
+      const controller = new AbortController();
+      ttsAbortControllerRef.current = controller;
 
       try {
         const apiBase = getApiBaseUrl();
@@ -162,7 +237,8 @@ export function useVoiceInterviewer({
             "Content-Type": "application/json",
             ...getAuthHeader(),
           },
-          body: JSON.stringify({ text, voice: "Puck" }),
+          body: JSON.stringify({ text: spokenText, voice: "Puck" }),
+          signal: controller.signal,
         });
 
         if (!res.ok) {
@@ -175,31 +251,43 @@ export function useVoiceInterviewer({
             await audioCtxRef.current.resume();
           }
 
-          setIsSpeaking(true);
           const source = playPcmAudio(data.audio, data.sampleRate || 24000, audioCtxRef.current);
           currentAudioSourceRef.current = source;
 
           source.onended = () => {
             setIsSpeaking(false);
+            setCurrentlySpeakingId((prev) => (prev === speechId ? null : prev));
             currentAudioSourceRef.current = null;
           };
           return;
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        if (controller.signal.aborted) {
+          return; // Intentionally stopped, do nothing
+        }
         console.warn("[useVoiceInterviewer] Backend Neural TTS error, falling back to local synthesis:", err);
       }
 
       // Safe fallback if server voice is unreachable
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
+      if (typeof window !== "undefined" && "speechSynthesis" in window && !controller.signal.aborted) {
+        const utterance = new SpeechSynthesisUtterance(spokenText);
         utterance.rate = 1.05;
         utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = () => setIsSpeaking(false);
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setCurrentlySpeakingId((prev) => (prev === speechId ? null : prev));
+        };
+        utterance.onerror = () => {
+          setIsSpeaking(false);
+          setCurrentlySpeakingId((prev) => (prev === speechId ? null : prev));
+        };
         window.speechSynthesis.speak(utterance);
+      } else {
+        setIsSpeaking(false);
+        setCurrentlySpeakingId(null);
       }
     },
-    [enabled, isVoiceMuted, stopSpeaking]
+    [enabled, isVoiceMuted, stopSpeaking, currentlySpeakingId, isSpeaking]
   );
 
   // Stop recording candidate voice
@@ -217,8 +305,13 @@ export function useVoiceInterviewer({
       return;
     }
 
-    // Barge-in: immediately stop AI talking when candidate activates mic
+    // Immediately stop AI talking when candidate activates mic (Barge-in)
     stopSpeaking();
+
+    // Ensure audio context is ready
+    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume().catch(() => {});
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -338,17 +431,36 @@ export function useVoiceInterviewer({
     });
   }, [stopSpeaking]);
 
+  const toggleAutoVoice = useCallback(() => {
+    setIsAutoVoiceEnabled((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("archon_auto_voice", String(next));
+      }
+      if (!next) {
+        stopSpeaking();
+        toast.info("Auto-Voice replies disabled. Click 'Listen' on any response.");
+      } else {
+        toast.success("Auto-Voice enabled. AI will speak responses automatically.");
+      }
+      return next;
+    });
+  }, [stopSpeaking]);
+
   return {
     isListening,
     isTranscribing,
     isSpeaking,
     isVoiceMuted,
+    isAutoVoiceEnabled,
+    currentlySpeakingId,
     interimTranscript,
     isSupported,
     toggleListening,
     startListening,
     stopListening,
     toggleVoiceMute,
+    toggleAutoVoice,
     speak,
     stopSpeaking,
   };

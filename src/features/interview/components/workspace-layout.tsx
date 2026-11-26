@@ -150,8 +150,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
-  const speakRef = useRef<(text: string) => void>(() => {});
+  const speakRef = useRef<(text: string, messageId?: string) => void>(() => {});
   const sendChatRef = useRef<(text: string) => void>(() => {});
+  const isAutoVoiceRef = useRef<boolean>(true);
 
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => {
@@ -165,7 +166,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     });
 
     if (msg.sender === "ai") {
-      speakRef.current(msg.text);
+      if (isAutoVoiceRef.current) {
+        speakRef.current(msg.text, msg.id);
+      }
     }
   }, []);
 
@@ -194,12 +197,15 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     isTranscribing,
     isSpeaking: isAiSpeaking,
     isVoiceMuted,
+    isAutoVoiceEnabled,
+    currentlySpeakingId,
     interimTranscript,
     isSupported: isVoiceSupported,
     toggleListening,
     startListening,
     stopListening,
     toggleVoiceMute,
+    toggleAutoVoice,
     speak,
     stopSpeaking,
   } = useVoiceInterviewer({
@@ -209,6 +215,10 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   useEffect(() => {
     speakRef.current = speak;
   }, [speak]);
+
+  useEffect(() => {
+    isAutoVoiceRef.current = isAutoVoiceEnabled && !isVoiceMuted;
+  }, [isAutoVoiceEnabled, isVoiceMuted]);
 
   const {
     wsStatus,
@@ -544,19 +554,30 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const WsBadge = () => {
     if (wsStatus === "open")
       return (
-        <span className="flex items-center gap-1.5 text-[11px] font-medium text-teal-600 dark:text-teal-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-500" /> Session Active
+        <span
+          className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20"
+          title="Session WebSocket Active"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+          Live
         </span>
       );
     if (wsStatus === "connecting")
       return (
-        <span className="flex items-center gap-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
-          <Loader2 className="h-3 w-3 animate-spin" /> Connecting...
+        <span
+          className="flex items-center gap-1 text-[10px] font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20"
+          title="Connecting to session..."
+        >
+          <Loader2 className="h-2.5 w-2.5 animate-spin" />
         </span>
       );
     return (
-      <span className="flex items-center gap-1.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-0.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
-        <WifiOff className="h-3 w-3" /> Disconnected
+      <span
+        onClick={() => reconnect()}
+        className="flex items-center gap-1 text-[10px] font-medium text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20 cursor-pointer"
+        title="Disconnected. Click to reconnect."
+      >
+        <WifiOff className="h-2.5 w-2.5" />
       </span>
     );
   };
@@ -693,67 +714,87 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
         <div className="w-[380px] md:w-[420px] bg-white dark:bg-[#090a0e] border-l border-zinc-200 dark:border-zinc-850 flex flex-col h-full z-10 flex-shrink-0">
           {/* Chat Header */}
-          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40 flex items-center justify-between gap-2 shrink-0 font-sans">
+          <div className="px-3.5 py-2.5 border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40 flex items-center justify-between gap-2 shrink-0 font-sans">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+              <span className="text-xs font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 AI Interviewer
               </span>
-              {isAiSpeaking && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 animate-pulse font-medium shrink-0">
-                  <Volume2 className="h-3 w-3 animate-bounce" />
+              {/* Single mutually exclusive status indicator */}
+              {isAiSpeaking ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 animate-pulse font-medium shrink-0">
+                  <Volume2 className="h-2.5 w-2.5 animate-bounce" />
                   Speaking
                 </span>
-              )}
-              {isListening && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse font-medium shrink-0">
-                  <Mic className="h-3 w-3" />
+              ) : isListening ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse font-medium shrink-0">
+                  <Mic className="h-2.5 w-2.5" />
                   Listening
+                </span>
+              ) : isTranscribing ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9.5px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 animate-pulse font-medium shrink-0">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  Transcribing
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[9.5px] text-zinc-400 font-medium shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Ready
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* Auto Voice Toggle */}
+              <button
+                type="button"
+                onClick={toggleAutoVoice}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors cursor-pointer ${
+                  isAutoVoiceEnabled && !isVoiceMuted
+                    ? "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/25"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:text-zinc-200"
+                }`}
+                title={
+                  isAutoVoiceEnabled && !isVoiceMuted
+                    ? "Auto-Voice is ON (AI replies automatically with speech). Click to toggle."
+                    : "Auto-Voice is OFF (AI replies silently). Click to enable auto-speech."
+                }
+              >
+                <Volume2 className="h-3 w-3" />
+                <span>Voice {isAutoVoiceEnabled && !isVoiceMuted ? "ON" : "OFF"}</span>
+              </button>
+
               <span
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60"
-                title={`Screen vision actively evaluating architecture components`}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60"
+                title="AI vision actively observing architecture components"
               >
                 <Eye className="h-2.5 w-2.5 text-emerald-500" />
                 Vision
               </span>
-              <button
-                type="button"
-                onClick={toggleVoiceMute}
-                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                  isVoiceMuted
-                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700"
-                    : "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/25"
-                }`}
-                title={isVoiceMuted ? "Unmute AI Voice" : "Mute AI Voice"}
-              >
-                {isVoiceMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-              </button>
+
               <WsBadge />
             </div>
           </div>
 
-          {/* Interactive Interview Stage Progress Stepper */}
-          <div className="px-3 py-2 border-b border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-100/50 dark:bg-zinc-950/40 flex items-center justify-between gap-1 overflow-x-auto text-[10px] font-sans">
+          {/* Interactive Interview Stage Progress Stepper (Clean 5-Column Grid) */}
+          <div className="px-2.5 py-1.5 border-b border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-100/50 dark:bg-zinc-950/40 grid grid-cols-5 gap-1 text-center font-sans">
             {STAGES.map((s, idx) => {
               const isCurrent = s.id === interviewStage;
               const isDone = idx < currentStageIndex;
+              const shortLabels = ["1. Req", "2. Scale", "3. Arch", "4. Deep", "5. Done"];
               return (
                 <div
                   key={s.id}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md whitespace-nowrap text-[9.5px] transition-all ${
+                  title={`${s.label}${isCurrent ? " (Current Stage)" : isDone ? " (Completed)" : ""}`}
+                  className={`flex items-center justify-center gap-1 py-1 rounded text-[9.5px] transition-all truncate ${
                     isCurrent
-                      ? "bg-violet-600 text-white font-semibold shadow-xs"
+                      ? "bg-violet-600 text-white font-bold shadow-xs"
                       : isDone
                       ? "text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20"
-                      : "text-zinc-400 dark:text-zinc-600"
+                      : "text-zinc-400 dark:text-zinc-600 font-normal"
                   }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
+                    className={`w-1 h-1 rounded-full shrink-0 ${
                       isCurrent
                         ? "bg-white animate-pulse"
                         : isDone
@@ -761,7 +802,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                         : "bg-zinc-300 dark:bg-zinc-700"
                     }`}
                   />
-                  <span>{s.label}</span>
+                  <span className="truncate">{shortLabels[idx]}</span>
                 </div>
               );
             })}
@@ -841,12 +882,29 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                     <div className="mt-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800 flex items-center justify-between">
                       <button
                         type="button"
-                        onClick={() => speak(msg.text)}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors cursor-pointer"
-                        title="Replay AI Voice response"
+                        onClick={() => speak(msg.text, msg.id)}
+                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium transition-colors cursor-pointer ${
+                          currentlySpeakingId === msg.id && isAiSpeaking
+                            ? "bg-violet-500/20 text-violet-400 border border-violet-500/30 animate-pulse"
+                            : "text-violet-600 dark:text-violet-400 hover:bg-violet-500/10"
+                        }`}
+                        title={
+                          currentlySpeakingId === msg.id && isAiSpeaking
+                            ? "Stop playing this message"
+                            : "Listen to this AI response"
+                        }
                       >
-                        <Volume2 className="h-3 w-3" />
-                        Listen
+                        {currentlySpeakingId === msg.id && isAiSpeaking ? (
+                          <>
+                            <Volume2 className="h-3 w-3 animate-bounce text-violet-500" />
+                            <span>Stop Audio</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="h-3 w-3" />
+                            <span>Listen</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
