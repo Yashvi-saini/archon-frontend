@@ -24,7 +24,7 @@ export interface UseVoiceInterviewerReturn {
 }
 
 function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "https://archon.monu14.me";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8071";
 }
 
 function getAuthHeader(): Record<string, string> {
