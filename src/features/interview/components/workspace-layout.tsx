@@ -135,14 +135,14 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => {
-      const isDuplicate = prev.some((m) => m.sender === msg.sender && m.text === msg.text);
-      if (isDuplicate) return prev;
+      if (prev.length > 0) {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg.id === msg.id || (lastMsg.sender === msg.sender && lastMsg.text === msg.text)) {
+          return prev;
+        }
+      }
       return [...prev, msg];
     });
   }, []);
@@ -159,6 +159,10 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     cancelAiTyping,
     reconnect,
   } = useInterviewWs(sessionId, addMessage);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streamingAiText, isAiTyping]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
