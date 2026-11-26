@@ -20,6 +20,12 @@ import {
   UploadCloud,
   Bot,
   Trash2,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Eye,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -28,6 +34,7 @@ import { WhiteboardCanvas } from "./canvas/whiteboard-canvas";
 import { useInterviewWs } from "../hooks/use-interview-ws";
 import { useInterviewDiagram } from "../hooks/use-interview-diagram";
 import { useSubmitInterview } from "../hooks/use-submit-interview";
+import { useVoiceInterviewer } from "../hooks/use-voice-interviewer";
 import {
   buildElementSnapshotMap,
   EDGE_SHAPE_TYPES,
@@ -49,6 +56,14 @@ import type {
 interface WorkspaceLayoutProps {
   sessionId: string;
 }
+
+const STAGES = [
+  { id: "REQUIREMENTS", label: "Requirements" },
+  { id: "ESTIMATION", label: "Scale & Est." },
+  { id: "HIGH_LEVEL", label: "Architecture" },
+  { id: "DEEP_DIVE", label: "Deep Dive" },
+  { id: "COMPLETED", label: "Completed" },
+];
 
 export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   const router = useRouter();
@@ -135,6 +150,27 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
+  const handleVoiceTranscriptComplete = useCallback((transcript: string) => {
+    if (!transcript.trim()) return;
+    setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+  }, []);
+
+  const {
+    isListening,
+    isSpeaking: isAiSpeaking,
+    isVoiceMuted,
+    interimTranscript,
+    isSupported: isVoiceSupported,
+    toggleListening,
+    startListening,
+    stopListening,
+    toggleVoiceMute,
+    speak,
+    stopSpeaking,
+  } = useVoiceInterviewer({
+    onTranscriptComplete: handleVoiceTranscriptComplete,
+  });
+
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => {
       if (prev.length > 0) {
@@ -145,7 +181,11 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
       }
       return [...prev, msg];
     });
-  }, []);
+
+    if (msg.sender === "ai") {
+      speak(msg.text);
+    }
+  }, [speak]);
 
   const {
     wsStatus,
@@ -156,9 +196,15 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     sendEdgeDeleted,
     isAiTyping,
     streamingAiText,
+    interviewStage,
     cancelAiTyping,
     reconnect,
   } = useInterviewWs(sessionId, addMessage);
+
+  const currentStageIndex = useMemo(() => {
+    const idx = STAGES.findIndex((s) => s.id === interviewStage);
+    return idx >= 0 ? idx : 0;
+  }, [interviewStage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -412,6 +458,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    stopSpeaking();
+    if (isListening) stopListening();
+
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
@@ -616,11 +665,78 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
         />
 
         <div className="w-[380px] md:w-[420px] bg-white dark:bg-[#090a0e] border-l border-zinc-200 dark:border-zinc-850 flex flex-col h-full z-10 flex-shrink-0">
-          <div className="p-4 border-b border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/10 flex items-center justify-between font-sans">
-            <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              System Interviewer
-            </span>
-            <WsBadge />
+          <div className="p-3.5 border-b border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/10 flex items-center justify-between font-sans">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                System Interviewer
+              </span>
+              {isAiSpeaking && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary border border-primary/20 animate-pulse font-medium">
+                  <Volume2 className="h-2.5 w-2.5 animate-bounce" />
+                  Speaking
+                </span>
+              )}
+              {isListening && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse font-medium">
+                  <Mic className="h-2.5 w-2.5" />
+                  Listening
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50"
+                title={`AI actively observing ${architectureSummary?.totalComponents ?? 0} components and screen layout`}
+              >
+                <Eye className="h-2.5 w-2.5 text-emerald-500" />
+                Vision Active
+              </span>
+              <button
+                type="button"
+                onClick={toggleVoiceMute}
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  isVoiceMuted
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                    : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                }`}
+                title={isVoiceMuted ? "Unmute AI Voice" : "Mute AI Voice"}
+              >
+                {isVoiceMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              </button>
+              <WsBadge />
+            </div>
+          </div>
+
+          {/* Interactive Interview Stage Progress Stepper */}
+          <div className="px-3 py-1.5 border-b border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-50/70 dark:bg-zinc-900/30 flex items-center justify-between gap-1 overflow-x-auto text-[10px] font-sans">
+            {STAGES.map((s, idx) => {
+              const isCurrent = s.id === interviewStage;
+              const isDone = idx < currentStageIndex;
+              return (
+                <div
+                  key={s.id}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full whitespace-nowrap text-[9.5px] transition-colors ${
+                    isCurrent
+                      ? "bg-primary/10 text-primary border border-primary/30 font-bold"
+                      : isDone
+                      ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                      : "text-zinc-400 dark:text-zinc-600"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isCurrent
+                        ? "bg-primary animate-pulse"
+                        : isDone
+                        ? "bg-emerald-500"
+                        : "bg-zinc-300 dark:bg-zinc-700"
+                    }`}
+                  />
+                  <span>{s.label}</span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -726,27 +842,50 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
           <form
             onSubmit={handleSendMessage}
-            className="p-4 border-t border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-[#090a0e] flex items-center gap-2"
+            className="p-3.5 border-t border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-[#090a0e] flex flex-col gap-2"
           >
-            <input
-              type="text"
-              placeholder={
-                wsStatus === "open"
-                  ? "Explain your design or ask a question..."
-                  : "AI connection unavailable..."
-              }
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              disabled={wsStatus !== "open"}
-              className="flex-1 px-3.5 py-2.5 text-xs bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!inputText.trim() || wsStatus !== "open"}
-              className="p-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-100 dark:text-zinc-900 rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+            {interimTranscript && (
+              <div className="text-[11px] text-zinc-600 dark:text-zinc-300 italic flex items-center gap-1.5 px-3 py-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-lg animate-pulse border border-zinc-200 dark:border-zinc-700">
+                <Mic className="h-3 w-3 text-rose-500 animate-bounce" />
+                <span className="truncate">Hearing: &quot;{interimTranscript}&quot;...</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleListening}
+                disabled={wsStatus !== "open"}
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer flex-shrink-0 ${
+                  isListening
+                    ? "bg-rose-500 text-white border-rose-600 shadow-md animate-pulse"
+                    : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                }`}
+                title={isListening ? "Stop voice listening" : "Talk to AI interviewer (Voice Mode)"}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+              <input
+                type="text"
+                placeholder={
+                  isListening
+                    ? "Listening to your voice..."
+                    : wsStatus === "open"
+                    ? "Explain design or click mic to talk..."
+                    : "AI connection unavailable..."
+                }
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                disabled={wsStatus !== "open"}
+                className="flex-1 px-3.5 py-2.5 text-xs bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={!inputText.trim() || wsStatus !== "open"}
+                className="p-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-zinc-100 dark:text-zinc-900 rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex-shrink-0"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
           </form>
         </div>
       </div>

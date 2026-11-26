@@ -23,6 +23,7 @@ export interface UseInterviewWsReturn {
   sendEdgeDeleted: (id: string) => void;
   isAiTyping: boolean;
   streamingAiText: string;
+  interviewStage: string;
   cancelAiTyping: () => void;
   reconnect: () => void;
 }
@@ -35,6 +36,7 @@ export function useInterviewWs(
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [streamingAiText, setStreamingAiText] = useState("");
+  const [interviewStage, setInterviewStage] = useState<string>("REQUIREMENTS");
   const pendingQueueRef = useRef<string[]>([]);
 
   const onMessageRef = useRef(onMessage);
@@ -213,6 +215,11 @@ export function useInterviewWs(
                   (dataObj?.message as string | undefined)) ||
               null;
 
+            const rawState = (parsed.state || dataObj?.state) as string | undefined;
+            if (rawState) {
+              setInterviewStage(rawState.toUpperCase());
+            }
+
             if (parsed.role === "user" || parsed.sender === "user" || dataObj?.role === "user") {
               role = "user";
             }
@@ -339,6 +346,7 @@ export function useInterviewWs(
     sendEdgeDeleted,
     isAiTyping,
     streamingAiText,
+    interviewStage,
     cancelAiTyping,
     reconnect,
   };
