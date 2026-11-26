@@ -157,6 +157,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
   const {
     isListening,
+    isTranscribing,
     isSpeaking: isAiSpeaking,
     isVoiceMuted,
     interimTranscript,
@@ -844,31 +845,56 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             onSubmit={handleSendMessage}
             className="p-3.5 border-t border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-[#090a0e] flex flex-col gap-2"
           >
-            {interimTranscript && (
+            {(interimTranscript || isTranscribing) && (
               <div className="text-[11px] text-zinc-600 dark:text-zinc-300 italic flex items-center gap-1.5 px-3 py-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-lg animate-pulse border border-zinc-200 dark:border-zinc-700">
-                <Mic className="h-3 w-3 text-rose-500 animate-bounce" />
-                <span className="truncate">Hearing: &quot;{interimTranscript}&quot;...</span>
+                {isTranscribing ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                    <span>Transcribing with Groq Whisper Turbo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-3 w-3 text-rose-500 animate-bounce" />
+                    <span className="truncate">Hearing: &quot;{interimTranscript}&quot;...</span>
+                  </>
+                )}
               </div>
             )}
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={toggleListening}
-                disabled={wsStatus !== "open"}
+                disabled={wsStatus !== "open" || isTranscribing}
                 className={`p-2.5 rounded-xl border transition-all cursor-pointer flex-shrink-0 ${
                   isListening
                     ? "bg-rose-500 text-white border-rose-600 shadow-md animate-pulse"
+                    : isTranscribing
+                    ? "bg-zinc-100 dark:bg-zinc-800 text-primary border-zinc-200 dark:border-zinc-700 opacity-70"
                     : "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800"
                 }`}
-                title={isListening ? "Stop voice listening" : "Talk to AI interviewer (Voice Mode)"}
+                title={
+                  isListening
+                    ? "Stop voice recording (auto-transcribes with Groq Whisper)"
+                    : isTranscribing
+                    ? "Transcribing voice..."
+                    : "Speak with AI interviewer (Groq Whisper Turbo)"
+                }
               >
-                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {isTranscribing ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                ) : isListening ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
               </button>
               <input
                 type="text"
                 placeholder={
-                  isListening
-                    ? "Listening to your voice..."
+                  isTranscribing
+                    ? "Transcribing with Groq Whisper..."
+                    : isListening
+                    ? "Recording voice... Click mic when done speaking"
                     : wsStatus === "open"
                     ? "Explain design or click mic to talk..."
                     : "AI connection unavailable..."

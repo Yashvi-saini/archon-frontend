@@ -10,6 +10,7 @@ interface UseVoiceInterviewerOptions {
 
 export interface UseVoiceInterviewerReturn {
   isListening: boolean;
+  isTranscribing: boolean;
   isSpeaking: boolean;
   isVoiceMuted: boolean;
   interimTranscript: string;
@@ -22,17 +23,32 @@ export interface UseVoiceInterviewerReturn {
   stopSpeaking: () => void;
 }
 
-// Clean markdown, code blocks, and symbols so the speech sounds like a natural human interviewer
-export function cleanTextForSpeech(text: string): string {
-  return text
-    .replace(/```[\s\S]*?```/g, "") // remove multi-line code blocks
-    .replace(/`([^`]+)`/g, "$1") // unwrap inline backtick code
-    .replace(/\[STAGE:[^\]]*\]/gi, "") // strip stage tags
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // unwrap markdown links
-    .replace(/[#*_~>|\\]/g, "") // remove markdown syntax chars
-    .replace(/{[\s\S]*?}/g, "") // remove inline json snippets
-    .replace(/\s+/g, " ")
-    .trim();
+// Convert base64 PCM L16 24kHz audio into an AudioBuffer and play via Web Audio API
+function playPcmAudio(
+  base64Data: string,
+  sampleRate = 24000,
+  audioCtx: AudioContext
+): AudioBufferSourceNode {
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const int16View = new Int16Array(bytes.buffer);
+  const float32Array = new Float32Array(int16View.length);
+  for (let i = 0; i < int16View.length; i++) {
+    float32Array[i] = int16View[i] / 32768.0;
+  }
+
+  const buffer = audioCtx.createBuffer(1, float32Array.length, sampleRate);
+  buffer.copyToChannel(float32Array, 0);
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioCtx.destination);
+  source.start(0);
+  return source;
 }
 
 export function useVoiceInterviewer({
@@ -40,140 +56,211 @@ export function useVoiceInterviewer({
   enabled = true,
 }: UseVoiceInterviewerOptions = {}): UseVoiceInterviewerReturn {
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [isSupported, setIsSupported] = useState(false);
+  const [isSupported, setIsSupported] = useState(true);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const onTranscriptCompleteRef = useRef(onTranscriptComplete);
 
   useEffect(() => {
     onTranscriptCompleteRef.current = onTranscriptComplete;
   }, [onTranscriptComplete]);
 
-  // Initialize SpeechSynthesis and SpeechRecognition capabilities
+  // Initialize Web Audio Context
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if ("speechSynthesis" in window) {
-      synthRef.current = window.speechSynthesis;
-    }
-
-    // Check for browser SpeechRecognition
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (SpeechRecognitionAPI) {
-      setIsSupported(true);
-      try {
-        const recognition = new SpeechRecognitionAPI();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = "en-US";
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onresult = (event: any) => {
-          let currentInterim = "";
-          let finalUtterance = "";
-
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalUtterance += transcript;
-            } else {
-              currentInterim += transcript;
-            }
-          }
-
-          if (currentInterim) {
-            setInterimTranscript(currentInterim);
-          }
-
-          if (finalUtterance.trim()) {
-            setInterimTranscript("");
-            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            onTranscriptCompleteRef.current?.(finalUtterance.trim());
-          }
-        };
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        recognition.onerror = (event: any) => {
-          console.warn("[useVoiceInterviewer] Recognition error:", event.error);
-          if (event.error === "not-allowed") {
-            toast.error("Microphone access blocked. Please allow mic permissions in browser.");
-          }
-          setIsListening(false);
-          setInterimTranscript("");
-        };
-
-        recognition.onend = () => {
-          setIsListening(false);
-          setInterimTranscript("");
-        };
-
-        recognitionRef.current = recognition;
-      } catch (err) {
-        console.warn("[useVoiceInterviewer] Failed to initialize SpeechRecognition:", err);
-      }
-    } else {
-      setIsSupported(false);
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtxRef.current = new AudioContextClass();
     }
 
     return () => {
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (recognitionRef.current) {
+      if (currentAudioSourceRef.current) {
         try {
-          recognitionRef.current.abort();
+          currentAudioSourceRef.current.stop();
         } catch {
           // ignore
         }
       }
-      if (synthRef.current) {
-        synthRef.current.cancel();
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        audioCtxRef.current.close().catch(() => {});
       }
     };
   }, []);
 
+  // Stop any active neural speech playback (Barge-in cancellation)
   const stopSpeaking = useCallback(() => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
+    if (currentAudioSourceRef.current) {
+      try {
+        currentAudioSourceRef.current.stop();
+      } catch {
+        // ignore
+      }
+      currentAudioSourceRef.current = null;
+    }
+    // Also cancel native fallback speech if active
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
   }, []);
 
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current) {
-      toast.info("Speech recognition is not supported in this browser. You can still type in chat.");
+  // Neural TTS speech synthesis via Gemini 2.5 Flash Preview TTS
+  const speak = useCallback(
+    async (text: string) => {
+      if (!enabled || isVoiceMuted || !text.trim()) return;
+
+      stopSpeaking();
+
+      try {
+        const res = await fetch("/api/voice/synthesize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, voice: "Puck" }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`TTS API failed with status ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.audio && audioCtxRef.current) {
+          if (audioCtxRef.current.state === "suspended") {
+            await audioCtxRef.current.resume();
+          }
+
+          setIsSpeaking(true);
+          const source = playPcmAudio(data.audio, data.sampleRate || 24000, audioCtxRef.current);
+          currentAudioSourceRef.current = source;
+
+          source.onended = () => {
+            setIsSpeaking(false);
+            currentAudioSourceRef.current = null;
+          };
+          return;
+        }
+      } catch (err) {
+        console.warn("[useVoiceInterviewer] Neural TTS failed, using browser fallback:", err);
+      }
+
+      // Safe fallback if API error
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.05;
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+      }
+    },
+    [enabled, isVoiceMuted, stopSpeaking]
+  );
+
+  // Stop recording candidate voice and transcribe using Groq Whisper Turbo
+  const stopListening = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsListening(false);
+  }, []);
+
+  // Start recording candidate voice via MediaRecorder (WebM/Opus)
+  const startListening = useCallback(async () => {
+    if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      toast.error("Microphone access is not supported in this browser.");
       return;
     }
-    // Immediate barge-in: cancel any active AI speech as soon as candidate speaks
+
+    // Barge-in: immediately stop AI talking when candidate activates mic
     stopSpeaking();
 
     try {
-      recognitionRef.current.start();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      audioChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "audio/webm";
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+
+        if (audioChunksRef.current.length === 0) {
+          setIsListening(false);
+          return;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        audioChunksRef.current = [];
+
+        setIsTranscribing(true);
+        setInterimTranscript("Transcribing audio with Groq Whisper...");
+
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "speech.webm");
+
+          const res = await fetch("/api/voice/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!res.ok) {
+            throw new Error(`Whisper API error: ${res.statusText}`);
+          }
+
+          const data = await res.json();
+          const transcript = data.text?.trim() || "";
+
+          setInterimTranscript("");
+          setIsTranscribing(false);
+
+          if (transcript) {
+            onTranscriptCompleteRef.current?.(transcript);
+          } else {
+            toast.info("No clear speech detected. Please speak closer to your microphone.");
+          }
+        } catch (err) {
+          console.error("[useVoiceInterviewer] Groq Whisper error:", err);
+          setIsTranscribing(false);
+          setInterimTranscript("");
+          toast.error("Speech transcription failed. Please try again or type in chat.");
+        }
+      };
+
+      mediaRecorder.start(250); // Slice into 250ms chunks
       setIsListening(true);
-      setInterimTranscript("");
-    } catch {
-      // recognition may already be active
-      setIsListening(true);
+      setInterimTranscript("Listening...");
+    } catch (err) {
+      console.error("[useVoiceInterviewer] Microphone permission error:", err);
+      toast.error("Microphone permission denied. Please allow microphone access.");
+      setIsListening(false);
     }
   }, [stopSpeaking]);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
-      }
-    }
-    setIsListening(false);
-    setInterimTranscript("");
-  }, []);
 
   const toggleListening = useCallback(() => {
     if (isListening) {
@@ -190,56 +277,15 @@ export function useVoiceInterviewer({
         stopSpeaking();
         toast.info("AI interviewer voice muted");
       } else {
-        toast.success("AI interviewer voice enabled");
+        toast.success("AI interviewer voice active");
       }
       return next;
     });
   }, [stopSpeaking]);
 
-  const speak = useCallback(
-    (rawText: string) => {
-      if (!enabled || isVoiceMuted || !synthRef.current || typeof window === "undefined") return;
-
-      const cleanText = cleanTextForSpeech(rawText);
-      if (!cleanText) return;
-
-      // Stop previous speech before playing new response
-      synthRef.current.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = 1.05; // Slightly brisk, natural conversational tempo
-      utterance.pitch = 1.0;
-      utterance.lang = "en-US";
-
-      const voices = synthRef.current.getVoices();
-      // Prefer high-clarity natural English voices
-      const preferredVoice =
-        voices.find(
-          (v) =>
-            v.lang.startsWith("en") &&
-            (v.name.includes("Natural") ||
-              v.name.includes("Google") ||
-              v.name.includes("Samantha") ||
-              v.name.includes("Daniel") ||
-              v.name.includes("Siri") ||
-              v.name.includes("Premium"))
-        ) || voices.find((v) => v.lang.startsWith("en"));
-
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-
-      synthRef.current.speak(utterance);
-    },
-    [enabled, isVoiceMuted]
-  );
-
   return {
     isListening,
+    isTranscribing,
     isSpeaking,
     isVoiceMuted,
     interimTranscript,
