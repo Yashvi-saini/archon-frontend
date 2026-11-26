@@ -501,8 +501,23 @@ export function getDetectedArchitectureSummary(
   const componentCounts: Record<string, number> = {};
 
   const activeElements = elements.filter((el) => !el.isDeleted);
+  const seenGroups = new Set<string>();
 
   for (const el of activeElements) {
+    // Skip decorative caps or sub-elements to prevent double counting
+    if (el.customData?.isDecorative || el.customData?.isSubElement) {
+      continue;
+    }
+
+    // If part of a grouped composite stencil, only count the primary shape once
+    if (el.groupIds && el.groupIds.length > 0) {
+      const primaryGroup = el.groupIds[0];
+      if (seenGroups.has(primaryGroup)) {
+        continue;
+      }
+      seenGroups.add(primaryGroup);
+    }
+
     if (NODE_SHAPE_TYPES.has(el.type)) {
       const label = getElementLabel(el, activeElements);
       const customType = el.customData?.componentType;

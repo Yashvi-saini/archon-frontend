@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { fetchUserSettings } from "@/features/settings/api/settings";
 import { WhiteboardCanvas } from "./canvas/whiteboard-canvas";
+import { ComponentLibraryDrawer } from "./canvas/component-palette";
 import { useInterviewWs } from "../hooks/use-interview-ws";
 import { useInterviewDiagram } from "../hooks/use-interview-diagram";
 import { useSubmitInterview } from "../hooks/use-submit-interview";
@@ -141,13 +142,10 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     setTimeout(() => setCopiedJson(false), 2000);
   };
 
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+
   const handleToggleLibrary = () => {
-    const api = excalidrawAPI as { toggleSidebar?: (options: { name: string }) => void } | null;
-    if (typeof api?.toggleSidebar === "function") {
-      api.toggleSidebar({ name: "default" });
-    } else {
-      toast.info("Open the Library drawer from Excalidraw's toolbar to browse components.");
-    }
+    setIsLibraryOpen((prev) => !prev);
   };
 
   const speakRef = useRef<(text: string, messageId?: string) => void>(() => {});
@@ -635,10 +633,14 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
 
           <button
             onClick={handleToggleLibrary}
-            className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
-            title="Browse System Design Component Stencils in Library Drawer"
+            className={`p-2 border rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans ${
+              isLibraryOpen
+                ? "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30"
+                : "bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+            }`}
+            title="Browse & Search System Design Component Stencils"
           >
-            <BookOpen className="h-3.5 w-3.5 text-primary" />
+            <BookOpen className="h-3.5 w-3.5 text-violet-500" />
             <span className="hidden sm:inline font-semibold">Components Library</span>
           </button>
 
@@ -712,12 +714,21 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           canvasPreferences={canvasPreferences}
         />
 
+        {/* Dedicated On-Page Component Library Drawer with Real-Time Search */}
+        <ComponentLibraryDrawer
+          isOpen={isLibraryOpen}
+          onClose={() => setIsLibraryOpen(false)}
+          excalidrawAPI={excalidrawAPI}
+          sendNodeEvent={sendNodeEvent}
+          onSceneChange={handleSceneChange}
+        />
+
         <div className="w-[380px] md:w-[420px] bg-white dark:bg-[#090a0e] border-l border-zinc-200 dark:border-zinc-850 flex flex-col h-full z-10 flex-shrink-0">
           {/* Chat Header */}
           <div className="px-3.5 py-2.5 border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40 flex items-center justify-between gap-2 shrink-0 font-sans">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
-                AI Interviewer
+                Interviewer
               </span>
               {/* Single mutually exclusive status indicator */}
               {isAiSpeaking ? (
