@@ -23,6 +23,16 @@ export interface UseVoiceInterviewerReturn {
   stopSpeaking: () => void;
 }
 
+function getApiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_URL || "https://archon.monu14.me";
+}
+
+function getAuthHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("archon_access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // Convert base64 PCM L16 24kHz audio into an AudioBuffer and play via Web Audio API
 function playPcmAudio(
   base64Data: string,
@@ -60,7 +70,7 @@ export function useVoiceInterviewer({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [isSupported, setIsSupported] = useState(true);
+  const [isSupported] = useState(true);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -76,7 +86,9 @@ export function useVoiceInterviewer({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (AudioContextClass) {
       audioCtxRef.current = new AudioContextClass();
     }
@@ -112,7 +124,7 @@ export function useVoiceInterviewer({
     setIsSpeaking(false);
   }, []);
 
-  // Neural TTS speech synthesis via Gemini 2.5 Flash Preview TTS
+  // Production-grade Neural TTS speech synthesis via Go Backend API (/api/v1/voice/synthesize)
   const speak = useCallback(
     async (text: string) => {
       if (!enabled || isVoiceMuted || !text.trim()) return;
@@ -120,9 +132,13 @@ export function useVoiceInterviewer({
       stopSpeaking();
 
       try {
-        const res = await fetch("/api/voice/synthesize", {
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/api/v1/voice/synthesize`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeader(),
+          },
           body: JSON.stringify({ text, voice: "Puck" }),
         });
 
@@ -147,10 +163,10 @@ export function useVoiceInterviewer({
           return;
         }
       } catch (err) {
-        console.warn("[useVoiceInterviewer] Neural TTS failed, using browser fallback:", err);
+        console.warn("[useVoiceInterviewer] Backend Neural TTS error, falling back to local synthesis:", err);
       }
 
-      // Safe fallback if API error
+      // Safe fallback if server voice is unreachable
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.05;
@@ -163,7 +179,7 @@ export function useVoiceInterviewer({
     [enabled, isVoiceMuted, stopSpeaking]
   );
 
-  // Stop recording candidate voice and transcribe using Groq Whisper Turbo
+  // Stop recording candidate voice
   const stopListening = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
@@ -171,7 +187,7 @@ export function useVoiceInterviewer({
     setIsListening(false);
   }, []);
 
-  // Start recording candidate voice via MediaRecorder (WebM/Opus)
+  // Start recording candidate voice via MediaRecorder (WebM/Opus) and send to Go Backend
   const startListening = useCallback(async () => {
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       toast.error("Microphone access is not supported in this browser.");
@@ -218,14 +234,18 @@ export function useVoiceInterviewer({
         audioChunksRef.current = [];
 
         setIsTranscribing(true);
-        setInterimTranscript("Transcribing audio with Groq Whisper...");
+        setInterimTranscript("Transcribing audio with Groq Whisper Turbo...");
 
         try {
+          const apiBase = getApiBaseUrl();
           const formData = new FormData();
           formData.append("file", audioBlob, "speech.webm");
 
-          const res = await fetch("/api/voice/transcribe", {
+          const res = await fetch(`${apiBase}/api/v1/voice/transcribe`, {
             method: "POST",
+            headers: {
+              ...getAuthHeader(),
+            },
             body: formData,
           });
 
@@ -245,14 +265,14 @@ export function useVoiceInterviewer({
             toast.info("No clear speech detected. Please speak closer to your microphone.");
           }
         } catch (err) {
-          console.error("[useVoiceInterviewer] Groq Whisper error:", err);
+          console.error("[useVoiceInterviewer] Backend Whisper transcription error:", err);
           setIsTranscribing(false);
           setInterimTranscript("");
           toast.error("Speech transcription failed. Please try again or type in chat.");
         }
       };
 
-      mediaRecorder.start(250); // Slice into 250ms chunks
+      mediaRecorder.start(250);
       setIsListening(true);
       setInterimTranscript("Listening...");
     } catch (err) {
