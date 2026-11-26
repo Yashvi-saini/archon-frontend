@@ -119,9 +119,68 @@ export function shapeToNodeType(
     l.includes("elastic") ||
     l.includes("opensearch") ||
     l.includes("solr") ||
-    l.includes("meilisearch")
+    l.includes("meilisearch") ||
+    l.includes("geohash") ||
+    l.includes("quadtree") ||
+    l.includes("spatial") ||
+    l.includes("google s2") ||
+    l.includes("s2 geometry")
   ) {
     return "search";
+  }
+
+  if (
+    l.includes("routing") ||
+    l.includes("osrm") ||
+    l.includes("navigation")
+  ) {
+    return "service";
+  }
+
+  if (
+    l.includes("vector") ||
+    l.includes("pinecone") ||
+    l.includes("qdrant") ||
+    l.includes("milvus") ||
+    l.includes("embedding")
+  ) {
+    return "database";
+  }
+
+  if (
+    l.includes("coordinator") ||
+    l.includes("zookeeper") ||
+    l.includes("etcd") ||
+    l.includes("consul")
+  ) {
+    return "service";
+  }
+
+  if (
+    l.includes("waf") ||
+    l.includes("firewall") ||
+    l.includes("shield") ||
+    l.includes("rate limiter") ||
+    l.includes("token bucket")
+  ) {
+    return "gateway";
+  }
+
+  if (
+    l.includes("monitor") ||
+    l.includes("prometheus") ||
+    l.includes("grafana") ||
+    l.includes("metrics")
+  ) {
+    return "service";
+  }
+
+  if (
+    l.includes("logging") ||
+    l.includes("loki") ||
+    l.includes("logstash")
+  ) {
+    return "storage";
   }
 
   if (

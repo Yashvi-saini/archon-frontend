@@ -61,7 +61,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         activeApi.updateLibrary({
           libraryItems: systemDesignLib.current,
           merge: false,
-          openLibraryMenu: true,
+          openLibraryMenu: false,
           defaultStatus: "published",
         });
         libraryLoadedRef.current = true;
@@ -71,7 +71,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
   }, [activeApi]);
 
-  // Safely sync dark theme to Excalidraw after mount
+  // Safely sync dark theme to Excalidraw after mount, keeping sidebar closed by default
   useEffect(() => {
     if (!activeApi) return;
     try {
@@ -82,6 +82,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             viewBackgroundColor: "#121212",
             currentItemStrokeColor: "#e4e4e7",
             theme: "dark",
+            openSidebar: null,
           },
         });
       }
@@ -111,7 +112,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     [onSceneChange]
   );
 
-  // Default initial canvas state is strictly dark themed and blank
+  // Default initial canvas state is strictly dark themed and blank, with sidebar closed
   const initialData: ExcalidrawInitialDataState = useMemo(() => {
     return {
       elements: [],
@@ -120,7 +121,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         currentItemStrokeColor: "#e4e4e7",
         gridModeEnabled: false,
         objectsSnapModeEnabled: false,
-        openSidebar: { name: "default" },
+        openSidebar: null,
         theme: "dark" as const,
       },
     };

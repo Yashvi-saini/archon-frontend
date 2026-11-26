@@ -16,12 +16,26 @@ import {
   HardDrive,
   Search,
   GitFork,
+  Radio,
+  ShieldAlert,
+  Network,
+  Copy,
+  Workflow,
+  BarChart3,
+  MapPin,
+  Compass,
+  Lock,
+  LineChart,
+  FileText,
+  Boxes,
+  Share2,
+  Timer,
+  Activity,
   ChevronDown,
   ChevronUp,
   Box,
   Code2,
   Check,
-  Copy,
   Bot,
   UploadCloud,
 } from "lucide-react";
@@ -29,6 +43,7 @@ import { toast } from "sonner";
 import {
   SYSTEM_DESIGN_COMPONENTS,
   type SystemDesignComponentItem,
+  type SystemDesignCategory,
   createComponentElements,
 } from "../../lib/system-design-library";
 import type { DetectedArchitectureSummary } from "../../lib/diagram-utils";
@@ -60,15 +75,24 @@ const ICON_MAP: Record<string, React.ElementType> = {
   HardDrive,
   Search,
   GitFork,
+  Radio,
+  ShieldAlert,
+  Network,
+  Copy,
+  Workflow,
+  BarChart3,
+  MapPin,
+  Compass,
+  Lock,
+  LineChart,
+  FileText,
+  Boxes,
+  Share2,
+  Timer,
+  Activity,
 };
 
-type CategoryFilter =
-  | "All"
-  | "Edge & Client"
-  | "Network & Routing"
-  | "Compute"
-  | "Data & Storage"
-  | "Async & Messaging";
+type CategoryFilter = "All" | SystemDesignCategory;
 
 export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
   excalidrawAPI,
@@ -91,6 +115,8 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({
     "Compute",
     "Data & Storage",
     "Async & Messaging",
+    "Specialized & Search",
+    "Observability & Security",
   ];
 
   const filteredComponents =
