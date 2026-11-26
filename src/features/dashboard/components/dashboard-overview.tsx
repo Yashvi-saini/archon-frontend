@@ -20,10 +20,6 @@ export function DashboardOverview() {
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             Architecture Dashboard
           </h1>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-700/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-            Active Candidate
-          </span>
           {isLoading && (
             <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
           )}
