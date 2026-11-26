@@ -150,10 +150,44 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
-  const handleVoiceTranscriptComplete = useCallback((transcript: string) => {
-    if (!transcript.trim()) return;
-    setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+  const speakRef = useRef<(text: string) => void>(() => {});
+  const sendChatRef = useRef<(text: string) => void>(() => {});
+
+  const addMessage = useCallback((msg: ChatMessage) => {
+    setMessages((prev) => {
+      if (prev.length > 0) {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg.id === msg.id || (lastMsg.sender === msg.sender && lastMsg.text === msg.text)) {
+          return prev;
+        }
+      }
+      return [...prev, msg];
+    });
+
+    if (msg.sender === "ai") {
+      speakRef.current(msg.text);
+    }
   }, []);
+
+  const handleVoiceTranscriptComplete = useCallback(
+    (transcript: string) => {
+      const clean = transcript.trim();
+      if (!clean) return;
+
+      // Automatically send candidate's voice directly to AI Interviewer
+      const userMsg: ChatMessage = {
+        id: `user-voice-${Date.now()}`,
+        sender: "user",
+        text: clean,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      addMessage(userMsg);
+      sendChatRef.current(clean);
+      setInputText("");
+      toast.success("Voice sent to AI Interviewer");
+    },
+    [addMessage]
+  );
 
   const {
     isListening,
@@ -172,20 +206,8 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     onTranscriptComplete: handleVoiceTranscriptComplete,
   });
 
-  const addMessage = useCallback((msg: ChatMessage) => {
-    setMessages((prev) => {
-      if (prev.length > 0) {
-        const lastMsg = prev[prev.length - 1];
-        if (lastMsg.id === msg.id || (lastMsg.sender === msg.sender && lastMsg.text === msg.text)) {
-          return prev;
-        }
-      }
-      return [...prev, msg];
-    });
-
-    if (msg.sender === "ai") {
-      speak(msg.text);
-    }
+  useEffect(() => {
+    speakRef.current = speak;
   }, [speak]);
 
   const {
@@ -201,6 +223,10 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     cancelAiTyping,
     reconnect,
   } = useInterviewWs(sessionId, addMessage);
+
+  useEffect(() => {
+    sendChatRef.current = sendChat;
+  }, [sendChat]);
 
   const currentStageIndex = useMemo(() => {
     const idx = STAGES.findIndex((s) => s.id === interviewStage);
@@ -666,32 +692,33 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
         />
 
         <div className="w-[380px] md:w-[420px] bg-white dark:bg-[#090a0e] border-l border-zinc-200 dark:border-zinc-850 flex flex-col h-full z-10 flex-shrink-0">
-          <div className="p-3.5 border-b border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/10 flex items-center justify-between font-sans">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-                System Interviewer
+          {/* Chat Header */}
+          <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40 flex items-center justify-between gap-2 shrink-0 font-sans">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+                AI Interviewer
               </span>
               {isAiSpeaking && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary border border-primary/20 animate-pulse font-medium">
-                  <Volume2 className="h-2.5 w-2.5 animate-bounce" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30 animate-pulse font-medium shrink-0">
+                  <Volume2 className="h-3 w-3 animate-bounce" />
                   Speaking
                 </span>
               )}
               {isListening && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-500/10 text-rose-500 border border-rose-500/20 animate-pulse font-medium">
-                  <Mic className="h-2.5 w-2.5" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse font-medium shrink-0">
+                  <Mic className="h-3 w-3" />
                   Listening
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <span
-                className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700/50"
-                title={`AI actively observing ${architectureSummary?.totalComponents ?? 0} components and screen layout`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60"
+                title={`Screen vision actively evaluating architecture components`}
               >
                 <Eye className="h-2.5 w-2.5 text-emerald-500" />
-                Vision Active
+                Vision
               </span>
               <button
                 type="button"
@@ -699,7 +726,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                 className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                   isVoiceMuted
                     ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700"
-                    : "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                    : "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/25"
                 }`}
                 title={isVoiceMuted ? "Unmute AI Voice" : "Mute AI Voice"}
               >
@@ -710,25 +737,25 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           </div>
 
           {/* Interactive Interview Stage Progress Stepper */}
-          <div className="px-3 py-1.5 border-b border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-50/70 dark:bg-zinc-900/30 flex items-center justify-between gap-1 overflow-x-auto text-[10px] font-sans">
+          <div className="px-3 py-2 border-b border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-100/50 dark:bg-zinc-950/40 flex items-center justify-between gap-1 overflow-x-auto text-[10px] font-sans">
             {STAGES.map((s, idx) => {
               const isCurrent = s.id === interviewStage;
               const isDone = idx < currentStageIndex;
               return (
                 <div
                   key={s.id}
-                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full whitespace-nowrap text-[9.5px] transition-colors ${
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md whitespace-nowrap text-[9.5px] transition-all ${
                     isCurrent
-                      ? "bg-primary/10 text-primary border border-primary/30 font-bold"
+                      ? "bg-violet-600 text-white font-semibold shadow-xs"
                       : isDone
-                      ? "text-emerald-600 dark:text-emerald-400 font-medium"
+                      ? "text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20"
                       : "text-zinc-400 dark:text-zinc-600"
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
                       isCurrent
-                        ? "bg-primary animate-pulse"
+                        ? "bg-white animate-pulse"
                         : isDone
                         ? "bg-emerald-500"
                         : "bg-zinc-300 dark:bg-zinc-700"
@@ -781,34 +808,64 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex flex-col max-w-[85%] ${
+                className={`flex flex-col max-w-[88%] ${
                   msg.sender === "user" ? "ml-auto items-end" : "mr-auto items-start"
                 }`}
               >
+                <div className="flex items-center gap-1.5 mb-1 px-1">
+                  {msg.sender === "ai" ? (
+                    <>
+                      <Bot className="h-3 w-3 text-violet-500" />
+                      <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                        Interviewer
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                      You (Candidate)
+                    </span>
+                  )}
+                  <span className="text-[9px] text-zinc-400 dark:text-zinc-600 font-mono">
+                    {msg.timestamp}
+                  </span>
+                </div>
                 <div
-                  className={`p-3 rounded-xl text-xs leading-relaxed font-sans ${
+                  className={`p-3.5 rounded-2xl text-xs leading-relaxed font-sans shadow-xs transition-all ${
                     msg.sender === "user"
-                      ? "bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 font-medium rounded-tr-none"
-                      : "bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-800/60 rounded-tl-none"
+                      ? "bg-violet-600 text-white rounded-tr-sm font-medium"
+                      : "bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-800 rounded-tl-sm"
                   }`}
                 >
-                  {msg.text}
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                  {msg.sender === "ai" && (
+                    <div className="mt-2.5 pt-2 border-t border-zinc-200/60 dark:border-zinc-800 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => speak(msg.text)}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10.5px] font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-colors cursor-pointer"
+                        title="Replay AI Voice response"
+                      >
+                        <Volume2 className="h-3 w-3" />
+                        Listen
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 px-1 font-sans">
-                  {msg.timestamp}
-                </span>
               </div>
             ))}
 
             {streamingAiText && (
-              <div className="mr-auto items-start max-w-[85%] flex flex-col">
-                <div className="p-3 rounded-xl text-xs leading-relaxed font-sans bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 border border-zinc-200/50 dark:border-zinc-800/60 rounded-tl-none">
-                  {streamingAiText}
-                  <span className="inline-block w-1 h-3 ml-1 bg-primary/70 animate-pulse align-middle" />
+              <div className="mr-auto items-start max-w-[88%] flex flex-col">
+                <div className="flex items-center gap-1.5 mb-1 px-1">
+                  <Bot className="h-3 w-3 text-violet-500 animate-pulse" />
+                  <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400">
+                    Interviewer (Responding...)
+                  </span>
                 </div>
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1 px-1 font-sans">
-                  streaming...
-                </span>
+                <div className="p-3.5 rounded-2xl text-xs leading-relaxed font-sans bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-800 rounded-tl-sm">
+                  {streamingAiText}
+                  <span className="inline-block w-1.5 h-3.5 ml-1 bg-violet-500 animate-pulse align-middle rounded-xs" />
+                </div>
               </div>
             )}
 

@@ -92,18 +92,31 @@ export function useVoiceInterviewer({
     onTranscriptCompleteRef.current = onTranscriptComplete;
   }, [onTranscriptComplete]);
 
-  // Initialize Web Audio Context
+  // Initialize Web Audio Context and unlock on first user gesture
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const AudioContextClass =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (AudioContextClass) {
+    if (AudioContextClass && !audioCtxRef.current) {
       audioCtxRef.current = new AudioContextClass();
     }
 
+    const unlockAudio = () => {
+      if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+    };
+
+    window.addEventListener("click", unlockAudio);
+    window.addEventListener("touchstart", unlockAudio);
+    window.addEventListener("keydown", unlockAudio);
+
     return () => {
+      window.removeEventListener("click", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
       if (currentAudioSourceRef.current) {
         try {
           currentAudioSourceRef.current.stop();
