@@ -41,21 +41,22 @@ export function cleanTextForSpeech(raw: string): string {
     .replace(/\s+/g, " ")
     .trim();
 
-  // If text is very long (over 450 chars), take the first 2-3 sentences to keep latency under 600ms
-  if (clean.length > 450) {
+  // Low-latency conversational audio: synthesize the first 1-2 key sentences (up to 200 chars)
+  // This guarantees sub-second synthesis while preserving natural cadence.
+  if (clean.length > 200) {
     const sentences = clean.match(/[^.!?]+[.!?]+/g);
     if (sentences && sentences.length > 0) {
       let preview = "";
       for (const s of sentences) {
-        if ((preview + s).length <= 400) {
+        if ((preview + s).length <= 200) {
           preview += s;
         } else {
           break;
         }
       }
-      clean = preview.trim() || clean.slice(0, 350) + "...";
+      clean = preview.trim() || clean.slice(0, 180) + "...";
     } else {
-      clean = clean.slice(0, 350) + "...";
+      clean = clean.slice(0, 180) + "...";
     }
   }
   return clean;
@@ -75,10 +76,43 @@ function getApiBaseUrl(): string {
   return "http://localhost:8071";
 }
 
-function getAuthHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("archon_access_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+async function fetchWithAuthRetry(url: string, init: RequestInit = {}): Promise<Response> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("archon_access_token") : null;
+  const headers = new Headers(init.headers || {});
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  let res = await fetch(url, { ...init, headers });
+  if (res.status === 401 && typeof window !== "undefined") {
+    const refreshToken = localStorage.getItem("archon_refresh_token");
+    if (refreshToken) {
+      try {
+        const apiBase = getApiBaseUrl();
+        const refreshRes = await fetch(`${apiBase}/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          const newToken =
+            data?.access_token ||
+            data?.data?.access_token ||
+            data?.accessToken ||
+            data?.data?.accessToken;
+          if (newToken) {
+            localStorage.setItem("archon_access_token", newToken);
+            headers.set("Authorization", `Bearer ${newToken}`);
+            res = await fetch(url, { ...init, headers });
+          }
+        }
+      } catch {
+        // Continue with original response
+      }
+    }
+  }
+  return res;
 }
 
 // Convert base64 PCM L16 24kHz audio into an AudioBuffer and play via Web Audio API
@@ -216,7 +250,7 @@ export function useVoiceInterviewer({
         return;
       }
 
-      // Stop any existing playing audio immediately
+      // Stop any existing playing audio immediately (guarantees strictly one audio at a time)
       stopSpeaking();
 
       const spokenText = cleanTextForSpeech(text);
@@ -231,18 +265,17 @@ export function useVoiceInterviewer({
 
       try {
         const apiBase = getApiBaseUrl();
-        const res = await fetch(`${apiBase}/api/v1/voice/synthesize`, {
+        const res = await fetchWithAuthRetry(`${apiBase}/api/v1/voice/synthesize`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...getAuthHeader(),
           },
           body: JSON.stringify({ text: spokenText, voice: "Puck" }),
           signal: controller.signal,
         });
 
         if (!res.ok) {
-          throw new Error(`TTS API failed with status ${res.status}`);
+          throw new Error(`Voice synthesis returned status ${res.status}`);
         }
 
         const data = await res.json();
@@ -265,27 +298,12 @@ export function useVoiceInterviewer({
         if (controller.signal.aborted) {
           return; // Intentionally stopped, do nothing
         }
-        console.warn("[useVoiceInterviewer] Backend Neural TTS error, falling back to local synthesis:", err);
+        console.warn("[useVoiceInterviewer] Voice synthesis error:", err);
       }
 
-      // Safe fallback if server voice is unreachable
-      if (typeof window !== "undefined" && "speechSynthesis" in window && !controller.signal.aborted) {
-        const utterance = new SpeechSynthesisUtterance(spokenText);
-        utterance.rate = 1.05;
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          setCurrentlySpeakingId((prev) => (prev === speechId ? null : prev));
-        };
-        utterance.onerror = () => {
-          setIsSpeaking(false);
-          setCurrentlySpeakingId((prev) => (prev === speechId ? null : prev));
-        };
-        window.speechSynthesis.speak(utterance);
-      } else {
-        setIsSpeaking(false);
-        setCurrentlySpeakingId(null);
-      }
+      // Do NOT fall back to robotic local browser voice; preserve consistent neural voice persona
+      setIsSpeaking(false);
+      setCurrentlySpeakingId(null);
     },
     [enabled, isVoiceMuted, stopSpeaking, currentlySpeakingId, isSpeaking]
   );
@@ -358,7 +376,7 @@ export function useVoiceInterviewer({
         }
 
         setIsTranscribing(true);
-        setInterimTranscript("Transcribing audio with Groq Whisper Turbo...");
+        setInterimTranscript("Transcribing speech...");
 
         try {
           const apiBase = getApiBaseUrl();
@@ -366,17 +384,14 @@ export function useVoiceInterviewer({
           const formData = new FormData();
           formData.append("file", audioBlob, extension);
 
-          const res = await fetch(`${apiBase}/api/v1/voice/transcribe`, {
+          const res = await fetchWithAuthRetry(`${apiBase}/api/v1/voice/transcribe`, {
             method: "POST",
-            headers: {
-              ...getAuthHeader(),
-            },
             body: formData,
           });
 
           if (!res.ok) {
             const errData = await res.json().catch(() => null);
-            const serverMsg = errData?.error || `Whisper error: ${res.statusText} (${res.status})`;
+            const serverMsg = errData?.error || `Transcription error: ${res.statusText} (${res.status})`;
             throw new Error(serverMsg);
           }
 
@@ -393,7 +408,7 @@ export function useVoiceInterviewer({
           }
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : "Speech transcription failed";
-          console.error("[useVoiceInterviewer] Backend Whisper transcription error:", err);
+          console.error("[useVoiceInterviewer] Voice transcription error:", err);
           setIsTranscribing(false);
           setInterimTranscript("");
           toast.error(message);
@@ -402,7 +417,7 @@ export function useVoiceInterviewer({
 
       mediaRecorder.start(250);
       setIsListening(true);
-      setInterimTranscript("Listening...");
+      setInterimTranscript("Listening to candidate speech...");
     } catch (err) {
       console.error("[useVoiceInterviewer] Microphone permission error:", err);
       toast.error("Microphone permission denied. Please allow microphone access.");

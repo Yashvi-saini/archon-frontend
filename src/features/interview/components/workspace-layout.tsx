@@ -960,17 +960,17 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
             onSubmit={handleSendMessage}
             className="p-3.5 border-t border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-[#090a0e] flex flex-col gap-2"
           >
-            {(interimTranscript || isTranscribing) && (
+            {(interimTranscript || isTranscribing || isListening) && (
               <div className="text-[11px] text-zinc-600 dark:text-zinc-300 italic flex items-center gap-1.5 px-3 py-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-lg animate-pulse border border-zinc-200 dark:border-zinc-700">
                 {isTranscribing ? (
                   <>
                     <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                    <span>Transcribing with Groq Whisper Turbo...</span>
+                    <span>Transcribing speech...</span>
                   </>
                 ) : (
                   <>
                     <Mic className="h-3 w-3 text-rose-500 animate-bounce" />
-                    <span className="truncate">Hearing: &quot;{interimTranscript}&quot;...</span>
+                    <span className="truncate">Listening to candidate speech... Click mic when done</span>
                   </>
                 )}
               </div>
@@ -989,10 +989,10 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                 }`}
                 title={
                   isListening
-                    ? "Stop voice recording (auto-transcribes with Groq Whisper)"
+                    ? "Stop voice recording and send to AI interviewer"
                     : isTranscribing
                     ? "Transcribing voice..."
-                    : "Speak with AI interviewer (Groq Whisper Turbo)"
+                    : "Click to speak with AI interviewer"
                 }
               >
                 {isTranscribing ? (
@@ -1007,7 +1007,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                 type="text"
                 placeholder={
                   isTranscribing
-                    ? "Transcribing with Groq Whisper..."
+                    ? "Transcribing speech..."
                     : isListening
                     ? "Recording voice... Click mic when done speaking"
                     : wsStatus === "open"

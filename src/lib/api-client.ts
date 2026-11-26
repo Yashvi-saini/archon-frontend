@@ -1,4 +1,18 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8071";
+export function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  ) {
+    return "https://archon.monu14.me";
+  }
+  return "http://localhost:8071";
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
