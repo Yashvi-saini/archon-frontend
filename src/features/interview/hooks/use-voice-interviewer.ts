@@ -115,32 +115,68 @@ async function fetchWithAuthRetry(url: string, init: RequestInit = {}): Promise<
   return res;
 }
 
-// Convert base64 PCM L16 24kHz audio into an AudioBuffer and play via Web Audio API
-function playPcmAudio(
+// Convert base64 audio (linear PCM or encoded MPEG/MP3/WAV) into an AudioBuffer and play via Web Audio API
+async function playAudioData(
   base64Data: string,
   sampleRate = 24000,
+  mimeType = "audio/pcm;rate=24000",
   audioCtx: AudioContext
-): AudioBufferSourceNode {
+): Promise<AudioBufferSourceNode> {
   const binaryString = atob(base64Data);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
     bytes[i] = binaryString.charCodeAt(i);
   }
 
-  const int16View = new Int16Array(bytes.buffer);
-  const float32Array = new Float32Array(int16View.length);
-  for (let i = 0; i < int16View.length; i++) {
-    float32Array[i] = int16View[i] / 32768.0;
+  let buffer: AudioBuffer;
+  if (mimeType.includes("pcm")) {
+    const int16View = new Int16Array(bytes.buffer);
+    const float32Array = new Float32Array(int16View.length);
+    for (let i = 0; i < int16View.length; i++) {
+      float32Array[i] = int16View[i] / 32768.0;
+    }
+    buffer = audioCtx.createBuffer(1, float32Array.length, sampleRate);
+    buffer.copyToChannel(float32Array, 0);
+  } else {
+    // For MPEG/MP3/WAV/OGG from failover TTS, decode using browser's native decoder
+    const copyBuffer = bytes.buffer.slice(0);
+    buffer = await audioCtx.decodeAudioData(copyBuffer);
   }
-
-  const buffer = audioCtx.createBuffer(1, float32Array.length, sampleRate);
-  buffer.copyToChannel(float32Array, 0);
 
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
   source.connect(audioCtx.destination);
   source.start(0);
   return source;
+}
+
+function speakLocalFallback(text: string, onEnd: () => void): boolean {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    utterance.lang = "en-US";
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice =
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Natural") ||
+            v.name.includes("Google") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Daniel") ||
+            v.name.includes("Siri"))
+      ) || voices.find((v) => v.lang.startsWith("en"));
+    if (preferredVoice) utterance.voice = preferredVoice;
+    utterance.onend = onEnd;
+    utterance.onerror = onEnd;
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function useVoiceInterviewer({
@@ -284,7 +320,12 @@ export function useVoiceInterviewer({
             await audioCtxRef.current.resume();
           }
 
-          const source = playPcmAudio(data.audio, data.sampleRate || 24000, audioCtxRef.current);
+          const source = await playAudioData(
+            data.audio,
+            data.sampleRate || 24000,
+            data.mimeType || "audio/pcm;rate=24000",
+            audioCtxRef.current
+          );
           currentAudioSourceRef.current = source;
 
           source.onended = () => {
@@ -298,10 +339,17 @@ export function useVoiceInterviewer({
         if (controller.signal.aborted) {
           return; // Intentionally stopped, do nothing
         }
-        console.warn("[useVoiceInterviewer] Voice synthesis error:", err);
+        console.warn("[useVoiceInterviewer] Backend voice synthesis error, using browser fallback:", err);
+        // Resilient fallback: use browser speech synthesis if backend is unreachable or exhausted
+        const spoke = speakLocalFallback(spokenText, () => {
+          setIsSpeaking(false);
+          setCurrentlySpeakingId(null);
+        });
+        if (spoke) {
+          return;
+        }
       }
 
-      // Do NOT fall back to robotic local browser voice; preserve consistent neural voice persona
       setIsSpeaking(false);
       setCurrentlySpeakingId(null);
     },
