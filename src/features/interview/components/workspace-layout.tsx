@@ -24,7 +24,6 @@ import {
   MicOff,
   Volume2,
   VolumeX,
-  Eye,
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -549,37 +548,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     }
   };
 
-  const WsBadge = () => {
-    if (wsStatus === "open")
-      return (
-        <span
-          className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md border border-emerald-500/20"
-          title="Session WebSocket Active"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-          Live
-        </span>
-      );
-    if (wsStatus === "connecting")
-      return (
-        <span
-          className="flex items-center gap-1 text-[10px] font-medium text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md border border-amber-500/20"
-          title="Connecting to session..."
-        >
-          <Loader2 className="h-2.5 w-2.5 animate-spin" />
-        </span>
-      );
-    return (
-      <span
-        onClick={() => reconnect()}
-        className="flex items-center gap-1 text-[10px] font-medium text-rose-500 bg-rose-500/10 px-1.5 py-0.5 rounded-md border border-rose-500/20 cursor-pointer"
-        title="Disconnected. Click to reconnect."
-      >
-        <WifiOff className="h-2.5 w-2.5" />
-      </span>
-    );
-  };
-
   return (
     <div className="flex flex-col h-screen w-screen bg-zinc-50 dark:bg-[#08090c] text-foreground select-none overflow-hidden">
       <header className="h-14 border-b border-zinc-200 dark:border-zinc-850 bg-white dark:bg-[#0a0c10] flex items-center justify-between px-6 flex-shrink-0 z-40">
@@ -759,7 +727,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
               <button
                 type="button"
                 onClick={toggleAutoVoice}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10.5px] font-medium border transition-colors cursor-pointer ${
                   isAutoVoiceEnabled && !isVoiceMuted
                     ? "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/25"
                     : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:text-zinc-200"
@@ -773,16 +741,6 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
                 <Volume2 className="h-3 w-3" />
                 <span>Voice {isAutoVoiceEnabled && !isVoiceMuted ? "ON" : "OFF"}</span>
               </button>
-
-              <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60"
-                title="AI vision actively observing architecture components"
-              >
-                <Eye className="h-2.5 w-2.5 text-emerald-500" />
-                Vision
-              </span>
-
-              <WsBadge />
             </div>
           </div>
 
