@@ -507,6 +507,9 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
   };
 
   const handleGetAiFeedback = () => {
+    stopSpeaking();
+    if (isListening) stopListening();
+
     const api = excalidrawAPI as { getSceneElements: () => ExcalidrawElementSnapshot[] } | null;
     const elements = api?.getSceneElements() ?? [];
     const nodes = elements.filter((el) => !el.isDeleted && NODE_SHAPE_TYPES.has(el.type));
@@ -531,6 +534,17 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
     addMessage(userMsg);
     sendChat(prompt);
     toast.info("Requesting AI feedback...");
+  };
+
+  const handleToggleTimer = () => {
+    setIsTimerRunning((v) => {
+      const next = !v;
+      if (!next) {
+        stopSpeaking();
+        if (isListening) stopListening();
+      }
+      return next;
+    });
   };
 
   const submitInterviewMutation = useSubmitInterview();
@@ -609,7 +623,7 @@ export function InterviewWorkspace({ sessionId }: WorkspaceLayoutProps) {
           </div>
 
           <button
-            onClick={() => setIsTimerRunning((v) => !v)}
+            onClick={handleToggleTimer}
             className="p-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 text-xs font-medium font-sans"
           >
             {isTimerRunning ? (

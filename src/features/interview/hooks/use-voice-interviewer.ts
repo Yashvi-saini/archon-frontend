@@ -29,7 +29,9 @@ export interface UseVoiceInterviewerReturn {
 export function cleanTextForSpeech(raw: string): string {
   if (!raw) return "";
   let clean = raw
+    .replace(/\[STAGE:[^\]]*\]/gi, "")
     .replace(/```[\s\S]*?```/g, " Code block omitted. ")
+    .replace(/\{[\s\S]*?\}/g, "")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1")
@@ -526,6 +528,25 @@ export function useVoiceInterviewer({
       return next;
     });
   }, [stopSpeaking]);
+
+  // Pause audio and recording when candidate switches browser tabs
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopSpeaking();
+        if (isListening) {
+          stopListening();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [stopSpeaking, stopListening, isListening]);
 
   return {
     isListening,
